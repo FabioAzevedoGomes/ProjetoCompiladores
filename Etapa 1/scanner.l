@@ -1,7 +1,10 @@
         /* Definicoes */
 %{
     #include "tokens.h"
+    /* Linha atual do scanner*/
     int current_line = 1;
+    /* Funcao que conta quantidade de linhas ('\n') em uma string 'str' */
+    int count_newlines(char* str);
 %}
 
     /* Expressoes Regulares*/
@@ -17,7 +20,7 @@ literal_int     (\+|\-)?{digito}+
 literal_float   {literal_int}(\.{digito}+)((E|e){literal_int})?
 
 comentario_simples  \/\/.*\n
-    /* TODO Comentarios multi-linha*/
+comentario_composto \/\*(.|\n)*\*\/
 
 %%  /* Regras e Acoes*/
 
@@ -97,17 +100,33 @@ comentario_simples  \/\/.*\n
     /* Identificadores */
 {identificador}    {return TK_IDENTIFICADOR;}
 
-    /* Ignora comentarios*/
+    /* Ignora o comentario simples e incrementa a linha atual */
 {comentario_simples}    {current_line++;}
+    /* Ignora o comentario composto e conta suas linhas */
+{comentario_composto}   {current_line += count_newlines(yytext);}
 
     /* Ignora espacos e TABS*/
 " "|\t {}
 
-    /* Contador de Linhas*/
-\n         {current_line++;}
+    /* Contador de Linhas */
+\n     {current_line++;}
 
-.           {return TOKEN_ERRO; }
+    /* Se nao encaixa com nenhuma das especificacoes lexicas, retorna erro */
+.      {return TOKEN_ERRO; }
+
 %%      /* Funcoes Opcionais */
+
 int get_line_number(void){
     return current_line;
 } 
+
+int count_newlines(char* str){
+    int line_count = 0;
+    char* ptr = strchr(str, '\n');
+    while(ptr != NULL){
+        line_count++;
+        ptr = strchr(ptr+1, '\n');
+    }
+    
+    return line_count;
+}

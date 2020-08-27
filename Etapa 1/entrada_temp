@@ -11,6 +11,7 @@ int foo(int param)
 	int _integer2;
 	int _3integer;
 
+    /* int float char */
 	/*
 	  The next section tests reserved words and composite operators 
 	
