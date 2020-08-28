@@ -1,4 +1,4 @@
-        /* Definicoes */
+        /* DEFINICOES */
 %{
     #include "tokens.h"
     /* Linha atual do scanner*/
@@ -12,17 +12,25 @@ letra           [A-Za-z]
 digito          [0-9]
 alfanumerico    {letra}|{digito}
 
+/* Identificador: Caractere alfabeito seguido de 0 ou mais caracteres alfanumericos */
 identificador   ({letra}|_)({alfanumerico}|_)*
 
+/* Char: qualquer caractere entre aspas simples*/
 literal_char    '.'
+/* String: 0 ou mais caracteres entre aspas duplas*/
 literal_string  \".+\"
+/* Int: Qualquer sequencia de 1 ou mais digitos precedidos de + ou - (opcional) */
 literal_int     (\+|\-)?{digito}+
+/* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e/ou o caractere E|e seguido de um inteiro*/
 literal_float   {literal_int}(\.{digito}+)((E|e){literal_int})?
 
+/* Comentario simples: Tudo que segue na linha após '\\' */
 comentario_simples  \/\/.*\n
+/* Comentario composto: Tudo presente entre '\*' e '*\' (Podendo ocupar mais de 1 linha) */
 comentario_composto \/\*(.|\n)*\*\/
 
-%%  /* Regras e Acoes*/
+%%  
+    /* REGRAS E ACOES*/
 
     /* Palavras Reservadas */
 "int"       { return TK_PR_INT; }
@@ -114,7 +122,8 @@ comentario_composto \/\*(.|\n)*\*\/
     /* Se nao encaixa com nenhuma das especificacoes lexicas, retorna erro */
 .      {return TOKEN_ERRO; }
 
-%%      /* Funcoes Opcionais */
+%%
+    /* FUNCOES OPCIONAIS */
 
 int get_line_number(void){
     return current_line;
