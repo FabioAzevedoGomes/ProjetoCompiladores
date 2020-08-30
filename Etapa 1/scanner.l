@@ -1,7 +1,7 @@
         /* DEFINICOES */
 %{
     #include "tokens.h"
-    /* Linha atual do scanner*/
+    /* Linha atual do scanner */
     int current_line = 1;
     /* Funcao que conta quantidade de linhas ('\n') em uma string 'str' */
     int count_newlines(char* str);
@@ -16,21 +16,28 @@ alfanumerico    {letra}|{digito}
 identificador   ({letra}|_)({alfanumerico}|_)*
 
 /* Char: qualquer caractere entre aspas simples*/
-literal_char    '.'
+/* TODO evitar situacoes do tipo ''' e ' \n ', retornando como um TK_ERRO apenas*/
+literal_char    '.' 
 /* String: 0 ou mais caracteres entre aspas duplas*/
+/* TODO evitar situacoes onde ha quebra de linha dentro da string como "this is \n not valid"*/
 literal_string  \".+\"
 /* Int: Qualquer sequencia de 1 ou mais digitos precedidos de + ou - (opcional) */
 literal_int     (\+|\-)?{digito}+
-/* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e/ou o caractere E|e seguido de um inteiro*/
+/* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e/ou o caractere E|e seguido de um inteiro */
 literal_float   {literal_int}(\.{digito}+)((E|e){literal_int})?
 
-/* Comentario simples: Tudo que segue na linha após '\\' */
+/* Conjunto de todos os literais */
+literal    {literal_char}|{literal_string}|{literal_int}|{literal_float}
+
+/* Comentario simples: Tudo que segue na linha após '//' */
 comentario_simples  \/\/.*\n
-/* Comentario composto: Tudo presente entre '\*' e '*\' (Podendo ocupar mais de 1 linha) */
-comentario_composto \/\*(.|\n)*\*\/
+/* Comentario multi-linha: Tudo presente entre '/*' e '* /'(Podendo ocupar mais de 1 linha) */
+/* TODO utilizar outro metodo para avaliacao de comentario multi linha */
+/* TODO talvez o metodo BEGIN para alterar o estado do analisador durante a avaliacao de comentarios (e talvez para strings tambem) */
+comentario_multilinha \/\*(.|\n)*\*\/
 
 %%  
-    /* REGRAS E ACOES*/
+    /* REGRAS E ACOES */
 
     /* Palavras Reservadas */
 "int"       { return TK_PR_INT; }
@@ -110,16 +117,20 @@ comentario_composto \/\*(.|\n)*\*\/
 
     /* Ignora o comentario simples e incrementa a linha atual */
 {comentario_simples}    {current_line++;}
-    /* Ignora o comentario composto e conta suas linhas */
-{comentario_composto}   {current_line += count_newlines(yytext);}
+    /* Ignora o comentario multi-linha e conta suas linhas */
+{comentario_multilinha}   {current_line += count_newlines(yytext);}
 
-    /* Ignora espacos e TABS*/
+    /* Ignora espacos e TABS */
 " "|\t {}
 
     /* Contador de Linhas */
 \n     {current_line++;}
 
-    /* Se nao encaixa com nenhuma das especificacoes lexicas, retorna erro */
+    /* Nao e permitido literais 'colados' a identificadores (ex. 12nome, identificador1.34e-3, "string"identifier)  */
+{literal}{identificador} {return TOKEN_ERRO;}
+{identificador}{literal}   {return TOKEN_ERRO;}
+
+    /* Caracteres que nao forem identificados pelas regras definidas sao considerados erros */
 .      {return TOKEN_ERRO; }
 
 %%
