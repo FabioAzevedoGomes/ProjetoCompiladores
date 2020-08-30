@@ -3,8 +3,6 @@
     #include "tokens.h"
     /* Linha atual do scanner */
     int current_line = 1;
-    /* Funcao que conta quantidade de linhas ('\n') em uma string 'str' */
-    int count_newlines(char* str);
 %}
 
     /* Expressoes Regulares*/
@@ -15,12 +13,10 @@ alfanumerico    {letra}|{digito}
 /* Identificador: Caractere alfabeito seguido de 0 ou mais caracteres alfanumericos */
 identificador   ({letra}|_)({alfanumerico}|_)*
 
-/* Char: qualquer caractere entre aspas simples*/
-/* TODO evitar situacoes do tipo ''' e ' \n ', retornando como um TK_ERRO apenas*/
-literal_char    '.' 
+/* Char: qualquer caractere entre aspas simples que nao e aspas simples ('), nova linha (\n) ou vazio ("") */
+literal_char    '[^'""\n]'
 /* String: 0 ou mais caracteres entre aspas duplas*/
-/* TODO evitar situacoes onde ha quebra de linha dentro da string como "this is \n not valid"*/
-literal_string  \".+\"
+literal_string  \"[^\n"]+\"
 /* Int: Qualquer sequencia de 1 ou mais digitos precedidos de + ou - (opcional) */
 literal_int     (\+|\-)?{digito}+
 /* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e/ou o caractere E|e seguido de um inteiro */
@@ -31,10 +27,13 @@ literal    {literal_char}|{literal_string}|{literal_int}|{literal_float}
 
 /* Comentario simples: Tudo que segue na linha após '//' */
 comentario_simples  \/\/.*\n
-/* Comentario multi-linha: Tudo presente entre '/*' e '* /'(Podendo ocupar mais de 1 linha) */
-/* TODO utilizar outro metodo para avaliacao de comentario multi linha */
-/* TODO talvez o metodo BEGIN para alterar o estado do analisador durante a avaliacao de comentarios (e talvez para strings tambem) */
-comentario_multilinha \/\*(.|\n)*\*\/
+
+/* Comentario multilinha: Tudo que esta entre '/ *' e '* /' */
+comentario_multilinha_inicio "/*"
+comentario_multilinha_fim    "*/"
+
+/* Estado do analisador representando a leitura do conteudo de um comentario */
+%x COMENTARIO
 
 %%  
     /* REGRAS E ACOES */
@@ -117,8 +116,17 @@ comentario_multilinha \/\*(.|\n)*\*\/
 
     /* Ignora o comentario simples e incrementa a linha atual */
 {comentario_simples}    {current_line++;}
-    /* Ignora o comentario multi-linha e conta suas linhas */
-{comentario_multilinha}   {current_line += count_newlines(yytext);}
+
+    /* Comentario multi-linhas */
+    
+ /* Ao identificar '/ *' inicia o estado interno de comentario*/
+{comentario_multilinha_inicio}          {BEGIN COMENTARIO;}
+ /* Ignora tudo que esta dentro do comentario*/
+<COMENTARIO>[^\n]                       {}
+ /* Contabiliza as linhas */
+<COMENTARIO>\n                          {current_line++;}
+ /* Ao identificar '* /', encerra o estado interno de comentario */
+<COMENTARIO>{comentario_multilinha_fim} {BEGIN 0;}
 
     /* Ignora espacos e TABS */
 " "|\t {}
@@ -126,9 +134,8 @@ comentario_multilinha \/\*(.|\n)*\*\/
     /* Contador de Linhas */
 \n     {current_line++;}
 
-    /* Nao e permitido literais 'colados' a identificadores (ex. 12nome, identificador1.34e-3, "string"identifier)  */
-{literal}{identificador} {return TOKEN_ERRO;}
-{identificador}{literal}   {return TOKEN_ERRO;}
+    /* Nao e permitido literais 'colados' a identificadores (ex. 12nome)  */
+{literal}{identificador}   {return TOKEN_ERRO;}
 
     /* Caracteres que nao forem identificados pelas regras definidas sao considerados erros */
 .      {return TOKEN_ERRO; }
@@ -140,13 +147,3 @@ int get_line_number(void){
     return current_line;
 } 
 
-int count_newlines(char* str){
-    int line_count = 0;
-    char* ptr = strchr(str, '\n');
-    while(ptr != NULL){
-        line_count++;
-        ptr = strchr(ptr+1, '\n');
-    }
-    
-    return line_count;
-}
