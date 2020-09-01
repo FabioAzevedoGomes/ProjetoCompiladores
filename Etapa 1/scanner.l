@@ -10,16 +10,16 @@ letra           [A-Za-z]
 digito          [0-9]
 alfanumerico    {letra}|{digito}
 
-/* Identificador: Caractere alfabeito seguido de 0 ou mais caracteres alfanumericos */
+/* Identificador: Caractere alfabetico seguido de 0 ou mais caracteres alfanumericos */
 identificador   ({letra}|_)({alfanumerico}|_)*
 
 /* Char: qualquer caractere entre aspas simples que nao e aspas simples ('), nova linha (\n) ou vazio ("") */
 literal_char    '[^'""\n]'
-/* String: 0 ou mais caracteres entre aspas duplas*/
+/* String: 1 ou mais caracteres entre aspas duplas*/
 literal_string  \"[^\n"]+\"
 /* Int: Qualquer sequencia de 1 ou mais digitos precedidos de + ou - (opcional) */
 literal_int     (\+|\-)?{digito}+
-/* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e/ou o caractere E|e seguido de um inteiro */
+/* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e, opcionalmente, o caractere E|e seguido de um inteiro */
 literal_float   {literal_int}(\.{digito}+)((E|e){literal_int})?
 
 /* Conjunto de todos os literais */
@@ -137,7 +137,7 @@ comentario_multilinha_fim    "*/"
     /* Nao e permitido literais 'colados' a identificadores (ex. 12nome)  */
 {literal}{identificador}   {return TOKEN_ERRO;}
 
-    /* Caracteres que nao forem identificados pelas regras definidas sao considerados erros */
+    /* Caracteres que nao forem identificados pelas regras definidas acima sao considerados erros */
 .      {return TOKEN_ERRO; }
 
 %%
