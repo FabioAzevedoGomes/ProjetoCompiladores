@@ -1,6 +1,6 @@
 all: parser.tab.c lex.yy.c
-	gcc -c lex.yy.c parser.tab.c
-	gcc -o etapa2 lex.yy.o parser.tab.o -lfl
+	gcc -c main.c lex.yy.c parser.tab.c
+	gcc -o etapa2 main.o lex.yy.o parser.tab.o -lfl
 
 parser.tab.c:
 	bison -d parser.y
