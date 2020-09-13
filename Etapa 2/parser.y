@@ -113,8 +113,7 @@ var_local:  tipo_const_estatico TK_IDENTIFICADOR |  // Um tipo CONST STATIC, um 
             tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR; // Um tipo CONST STATIC, um identificador simples, e '<=' seguido de um identificador
 
 // Uma expressao pode ser:
-expressao:  operador_ternario |     // Uma expressao formada pelo operador ternario
-            expressao_logica |      // Uma expressao logica
+expressao:  expressao_logica |      // Uma expressao logica
             expressao_aritmetica;   // Uma expressao aritmetica
 
 // Os operadores unarios sao:
@@ -133,31 +132,23 @@ operadores_logicos: TK_OC_AND | TK_OC_OR;
 // Soma(+), subtracao(-), multiplicacao(*), divisao(/), modulo(%), bitwise or(|), bitwise and(&), potenciacao(^), operadores relacionais ou operadores logicos
 operador_binario: '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^' | operadores_relacionais | operadores_logicos;
 
-// Os operadores ternarios sao:
-// Uma expressao seguida de ?, com duas expressoes separadas por : logo apos
-operador_ternario: expressao '?' expressao ':' expressao;
-
-// Um operando logico pode ser:
-operando_logico:    TOKEN_ERRO |        // TODO Placeholder
-                    TK_LIT_TRUE |        // True 
-                    TK_LIT_FALSE;        // False
-
 // Uma expressao logica pode ser:
-expressao_logica:   TK_PR_PROTECTED |  // TODO Placeholder
-                    operando_logico;   // Um operando logico
+expressao_logica:   TK_PR_PROTECTED;    // TODO Placeholder
 
-// Um operando aritmetico pode ser:
-operando_aritmetico: TK_IDENTIFICADOR |                             // Um identificador
-                    TK_IDENTIFICADOR '[' expressao ']' | // Um vetor indexado
-                    TK_LIT_INT |                                    // Um literal inteiro
-                    TK_LIT_FLOAT |                                  // Um literal de ponto flutuante
-                    chamada_funcao;
+// Um operando pode ser:
+operando: TK_IDENTIFICADOR |                             // Um identificador
+          TK_IDENTIFICADOR '[' expressao ']' |           // Um vetor indexado
+          TK_LIT_INT |                                   // Um literal inteiro
+          TK_LIT_FLOAT |                                 // Um literal de ponto flutuante
+          TK_LIT_TRUE |                                  // Um literal do tipo true
+          TK_LIT_FALSE |                                 // Um literal do tipo false 
+          chamada_funcao;                                // Uma chamada de funcao
 
 // Uma expressao aritmetica pode ser:
-expressao_aritmetica:   operando_aritmetico |                           // Uma operando aritmetico
-                        '(' expressao ')' |                  // Uma expressao entre parenteses
-                        operador_unario operando_aritmetico |            // Um operador unario seguido de um operando
-                        expressao_aritmetica operador_binario operando_aritmetico; // Uma expressao aritmetica, um operador binario e um operando (Para forcar associatividade a esquerda)
+expressao_aritmetica:   operando |                           // Uma operando aritmetico
+                        '(' expressao_aritmetica ')' |                  // Uma expressao entre parenteses
+                        operador_unario operando |            // Um operador unario seguido de um operando
+                        expressao_aritmetica operador_binario operando; // Uma expressao aritmetica, um operador binario e um operando (Para forcar associatividade a esquerda)
 
 //Uma atribuicao pode ser:
 atribuicao: TK_IDENTIFICADOR '=' expressao |                    // Uma atribuicao a um identificador simples
@@ -169,8 +160,7 @@ comando_es: TK_PR_INPUT TK_IDENTIFICADOR |  // A palavra input, seguida de um id
             TK_PR_OUTPUT literal;           // A palavra output, seguida de um literal
 
 // Um argumento pode ser:
-argumento:  TK_PR_PUBLIC | // TODO Placeholder
-            expressao;      // Uma expressao
+argumento: expressao;      // Uma expressao
 
 // Uma lista de argumentos pode ser:
 lista_argumentos:   argumento |                     // Um unico argumento
@@ -187,7 +177,6 @@ operador_shift: TK_OC_SL | TK_OC_SR;
 // Um comando de shift pode ser:
 comando_shift:  TK_IDENTIFICADOR operador_shift TK_LIT_INT |                 // Um identificador seguido de um operador de shift e um literal inteiro positivo
                 TK_IDENTIFICADOR '[' expressao ']' operador_shift TK_LIT_INT;// Um vetor indexado por uma expressao, seguido de um operador de shift e um literal inteiro positivo
-
 
 // Um comando if pode ser:
 comando_if: TK_PR_IF '(' expressao ')' bloco_comandos | // A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos
