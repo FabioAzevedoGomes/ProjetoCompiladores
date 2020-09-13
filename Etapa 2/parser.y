@@ -70,8 +70,16 @@ programa:   %empty |                // Vazio
 tipo: TK_PR_INT | TK_PR_FLOAT | TK_PR_CHAR | TK_PR_BOOL | TK_PR_STRING; 
 
 // Um literal valido pode ser:
-// INT, FLOAT, FALSE, TRUE, CHAR, STRING
-literal: TK_LIT_INT | TK_LIT_FLOAT | TK_LIT_FALSE | TK_LIT_TRUE | TK_LIT_CHAR | TK_LIT_STRING;
+// Um literal aritmetico, um literal logico, CHAR ou STRING
+literal: literal_aritmetico | literal_logico | TK_LIT_CHAR | TK_LIT_STRING;
+
+// Um literal aritmetico pode ser:
+// Int ou float
+literal_aritmetico: TK_LIT_INT | TK_LIT_FLOAT;
+
+// Um literal logico pode ser:
+// True ou false
+literal_logico: TK_LIT_TRUE | TK_LIT_FALSE;
 
 // Um tipo estatico valido pode ser:
 // A palavra STATIC seguida de um tipo, ou apenas o tipo
@@ -249,8 +257,18 @@ operador_binario_aritmetico: '+' | '-' | '*' | '/' | '%' | '^';
 //================================================================================================
 
 // Uma expressao logica pode ser:
-expressao_logica:   TK_PR_PROTECTED;    // TODO Placeholder
+expressao_logica:   expressao_aritmetica comparador_relacional expressao_aritmetica | // Expressoes aritmeticas comparadas por operadores relacionais
+                    '!' expressao_logica | // Uma expressao logica negada
+                    expressao_logica operador_binario_logico expressao_logica   // TODO A primeira expressao logica causa 4 conflitos shift-reduce
+                    TK_IDENTIFICADOR;    // Uma variavel logica
 
+// Um operador relacional pode ser:
+// Menor ou igual, maior ou igual, igual, ou diferente
+comparador_relacional: TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE;
+
+// Um operador binario logico pode ser:
+// Bitwise or, bitwise and, or, ou and
+operador_binario_logico: '|' | '&' | TK_OC_AND | TK_OC_OR;
 
 %%
 
