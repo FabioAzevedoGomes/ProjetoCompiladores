@@ -113,14 +113,51 @@ var_local:  tipo_const_estatico TK_IDENTIFICADOR |  // Um tipo CONST STATIC, um 
             tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR; // Um tipo CONST STATIC, um identificador simples, e '<=' seguido de um identificador
 
 // Uma expressao pode ser:
-expressao:  expressao_logica |      // Uma expressao logica
+expressao:  operador_ternario |     // Uma expressao formada pelo operador ternario
+            expressao_logica |      // Uma expressao logica
             expressao_aritmetica;   // Uma expressao aritmetica
 
+// Os operadores unarios sao:
+// Positivo(+), negativo(-), negacao(!), acesso a endereco(&), resolucao(*), avaliacao(?) ou acesso a tabela hash(#)
+operador_unario: '+' | '-' | '!' | '&' | '*' | '?' | '#';
+
+// Os operadores relacionais sao:
+// Menor ou igual (<=), maior ou igual (>=), igual (==) ou diferente (!=)
+operadores_relacionais: TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE;
+
+// Os operadores logicos sao:
+// And (&&) e or (||)
+operadores_logicos: TK_OC_AND | TK_OC_OR;
+
+// Os operadores binarios sao:
+// Soma(+), subtracao(-), multiplicacao(*), divisao(/), modulo(%), bitwise or(|), bitwise and(&), potenciacao(^), operadores relacionais ou operadores logicos
+operador_binario: '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^' | operadores_relacionais | operadores_logicos;
+
+// Os operadores ternarios sao:
+// Uma expressao seguida de ?, com duas expressoes separadas por : logo apos
+operador_ternario: expressao '?' expressao ':' expressao;
+
+// Um operando logico pode ser:
+operando_logico:    TOKEN_ERRO |        // TODO Placeholder
+                    TK_LIT_TRUE |        // True 
+                    TK_LIT_FALSE;        // False
+
 // Uma expressao logica pode ser:
-expressao_logica: TK_PR_PROTECTED;  // TODO Placeholder
+expressao_logica:   TK_PR_PROTECTED |  // TODO Placeholder
+                    operando_logico;   // Um operando logico
+
+// Um operando aritmetico pode ser:
+operando_aritmetico: TK_IDENTIFICADOR |                             // Um identificador
+                    TK_IDENTIFICADOR '[' expressao ']' | // Um vetor indexado
+                    TK_LIT_INT |                                    // Um literal inteiro
+                    TK_LIT_FLOAT |                                  // Um literal de ponto flutuante
+                    chamada_funcao;
 
 // Uma expressao aritmetica pode ser:
-expressao_aritmetica: TOKEN_ERRO;      // TODO Placeholder
+expressao_aritmetica:   operando_aritmetico |                           // Uma operando aritmetico
+                        '(' expressao ')' |                  // Uma expressao entre parenteses
+                        operador_unario operando_aritmetico |            // Um operador unario seguido de um operando
+                        expressao_aritmetica operador_binario operando_aritmetico; // Uma expressao aritmetica, um operador binario e um operando (Para forcar associatividade a esquerda)
 
 //Uma atribuicao pode ser:
 atribuicao: TK_IDENTIFICADOR '=' expressao |                    // Uma atribuicao a um identificador simples
