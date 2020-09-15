@@ -18,9 +18,9 @@ literal_char    '[^'""\n]'
 /* String: 1 ou mais caracteres entre aspas duplas*/
 literal_string  \"[^\n"]+\"
 /* Int: Qualquer sequencia de 1 ou mais digitos precedidos de + ou - (opcional) */
-literal_int     (\+|\-)?{digito}+
+literal_int     {digito}+
 /* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e, opcionalmente, o caractere E|e seguido de um inteiro */
-literal_float   {literal_int}(\.{digito}+)((E|e){literal_int})?
+literal_float   {literal_int}(\.{digito}+)((E|e)(\+|\-)?{literal_int})?
 
 /* Conjunto de todos os literais */
 literal    {literal_char}|{literal_string}|{literal_int}|{literal_float}
