@@ -32,6 +32,33 @@ comentario_simples  \/\/.*\n
 comentario_multilinha_inicio "/*"
 comentario_multilinha_fim    "*/"
 
+/* Caracteres Especiais:
+ Sao eles:
+ Virgula (,)
+ Ponto e virgula (;)
+ Dois pontos (:)
+ Abre e fecha parenteses ( )
+ Abre e fecha colchetes [ ]
+ Abre e fecha chaves { }
+ Mais (+)
+ Menos (-)
+ Barra reta (|)
+ Asterisco (*)
+ Barra para frente (/)
+ Menor (<)
+ Maior (>)
+ Igual (=)
+ Exclamacao (!)
+ E-comercial (&)
+ Por cento (%)
+ Sustenido (#)
+ Chapeu (^)
+ Ponto (.)
+ Cifrao ($)
+ Interrogacao (?)
+*/
+caractere_especial ","|";"|":"|"("|")"|"["|"]"|"{"|"}"|"+"|"-"|"|"|"*"|"/"|"<"|">"|"="|"!"|"&"|"%"|"#"|"^"|"."|"$"|"?"
+
 /* Estado do analisador representando a leitura do conteudo de um comentario */
 %x COMENTARIO
 
@@ -68,31 +95,7 @@ comentario_multilinha_fim    "*/"
 "default"   { return TK_PR_DEFAULT; }
 
     /* Caracteres Especiais */
-","         {return ',';}
-";"         {return ';';}
-":"         {return ':';}
-"("         {return '(';}
-")"         {return ')';}
-"["         {return '[';}
-"]"         {return ']';}
-"{"         {return '{';}
-"}"         {return '}';}
-"+"         {return '+';}
-"-"         {return '-';}
-"|"         {return '|';}
-"*"         {return '*';}
-"/"         {return '/';}
-"<"         {return '<';}
-">"         {return '>';}
-"="         {return '=';}
-"!"         {return '!';}
-"&"         {return '&';}
-"%"         {return '%';}
-"#"         {return '#';}
-"^"         {return '^';}
-"."         {return '.';}
-"$"         {return '$';}
-"?"         {return '?';}
+{caractere_especial} {return yytext[0];}
 
     /* Operadores Compostos */
 "<="        {return TK_OC_LE;}
