@@ -161,17 +161,13 @@ comando_simples:    controle_fluxo |                // Um comando de controle de
 //                                          CHAMADA DE FUNCAO:
 //================================================================================================
 
-
-// Um argumento pode ser:
-argumento: expressao;      // Uma expressao
-
-// Uma lista de argumentos pode ser:
-lista_argumentos:   argumento |                     // Um unico argumento
-                    argumento ',' lista_argumentos; // Um argumento seguido de uma lista de argumentos, separados por ,
-
 // Uma chamada de funcao e:
 chamada_funcao: TK_IDENTIFICADOR '(' lista_argumentos ')' | // O nome da funcao, seguida de uma lista de argumentos entre parenteses
                 TK_IDENTIFICADOR '(' ')'; // O nome da funcao, seguido de parenteses (caso a lista de arugmentos seja vazia
+
+// Uma lista de argumentos pode ser:
+lista_argumentos:   expressao |                     // Um unico argumento
+                    expressao ',' lista_argumentos; // Um argumento seguido de uma lista de argumentos, separados por ,
 
 //================================================================================================
 //                                              COMANDOS SIMPLES:
@@ -213,7 +209,7 @@ controle_fluxo: comando_if |
 
 // Um comando if pode ser:
 comando_if: TK_PR_IF '(' expressao ')' bloco_comandos | // A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos
-            TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos;    // A palavra if, com uma expressao entre parenteses e seguida de um bloco de comandos. Adicionalmente, um else seguido de um bloco de comandos no final
+            TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos;
 
 // Um comando for pode ser:
 // A palavra for, seguida de, entre parenteses, uma atribuicao, expressao e atribuicao, separados por :, e por fim um bloco de comandos
@@ -228,51 +224,47 @@ comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos;
 //================================================================================================
 
 // Uma expressao pode ser:
-expressao:  expressao_logica |      // Uma expressao logica
-            expressao_aritmetica;   // Uma expressao aritmetica
+// Uma expressao operada junto a um termo, atraves de operadores de baixa precedencia, ou apenas um termo
+expressao: expressao operador_binario_baixa_prec termo | termo;
 
-//================================================================================================
-//                                EXPRESSOES ARITMETICAS:
-//================================================================================================
+// Um termo pode ser:
+// Um termo operado junto a um fator, atraves de operadores de alta precedencia, ou apenas um fator
+termo: termo operador_binario_alta_prec fator | fator;
 
-// Uma expressao aritmetica pode ser:
-expressao_aritmetica:   operando_aritmetico |                                                   // Uma operando aritmetico
-                        '(' expressao_aritmetica ')' |                                          // Uma expressao entre parenteses
-                        operador_unario_aritmetico operando_aritmetico |                        // Um operador unario seguido de um operando
-                        expressao_aritmetica operador_binario_aritmetico operando_aritmetico;   // Uma expressao aritmetica, um operador binario e um operando (Para forcar associatividade a esquerda)
+// Um fator pode ser:
+// Uma expressao entre parenteses, ou apenas um operando
+fator: '(' expressao ')' | operando;
+           
+// Um operando pode ser:
+operando:  TK_IDENTIFICADOR |                   // Um identificador
+           TK_IDENTIFICADOR '[' expressao ']' | // Um vetor indexado por uma expressao
+           TK_LIT_INT |                         // Um literal inteiro
+           TK_LIT_FLOAT |                       // Um literal float
+           chamada_funcao |                     // Uma chamada de funcao
+           TK_LIT_TRUE |                        // Um literal TRUE
+           TK_LIT_FALSE |                       // Um literal FALSE
+           operador_unario fator;               // Um operador unario aplicado a um fator
 
-// Um operando aritmetico pode ser:
-operando_aritmetico:    TK_IDENTIFICADOR |  // Um identificador simples
-                        TK_IDENTIFICADOR '[' expressao_aritmetica ']' | // Um vetor enderecado por uma expressao
-                        TK_LIT_INT |    // Um literal inteiro
-                        TK_LIT_FLOAT |  // Um literal em ponto flutuante
-                        chamada_funcao; // Uma chamada de funcao
 
-// Um operador aritmetico unario pode ser:
-// Positivo ou negativo
-operador_unario_aritmetico: '+' | '-';
+// Um comparador relacional pode ser:
+// Maior ou igual, menor ou igual, igual, ou diferente
+comparador_relacional: TK_OC_GE | TK_OC_LE | TK_OC_EQ | TK_OC_NE;
 
-// Um operador aritmetico binario pode ser:
-// Soma, subtracao, multiplicacao, divisao, modulo e exponenciacao
-operador_binario_aritmetico: '+' | '-' | '*' | '/' | '%' | '^';
+// Um operador logico pode ser:
+// And ou Or
+operador_logico: TK_OC_AND | TK_OC_OR;
 
-//================================================================================================
-//                                EXPRESSOES LOGICAS:
-//================================================================================================
+// Um operador binario de baixa precedencia pode ser:
+// Soma, subtracao, bitwise or, bitwise and, comparadores relacionais e operadores logicos
+operador_binario_baixa_prec: '+' | '-' | '|' | '&' | comparador_relacional | operador_logico;
 
-// Uma expressao logica pode ser:
-expressao_logica:   expressao_aritmetica comparador_relacional expressao_aritmetica | // Expressoes aritmeticas comparadas por operadores relacionais
-                    '!' expressao_logica | // Uma expressao logica negada
-                    expressao_logica operador_binario_logico expressao_logica   // TODO A primeira expressao logica causa 4 conflitos shift-reduce
-                    TK_IDENTIFICADOR;    // Uma variavel logica
+// Um operador binario de alta precedencia pode ser:
+// Multiplicacao, divisao, modulo e exponenciacao
+operador_binario_alta_prec: '*' | '/' | '%' | '^';
 
-// Um operador relacional pode ser:
-// Menor ou igual, maior ou igual, igual, ou diferente
-comparador_relacional: TK_OC_LE | TK_OC_GE | TK_OC_EQ | TK_OC_NE;
-
-// Um operador binario logico pode ser:
-// Bitwise or, bitwise and, or, ou and
-operador_binario_logico: '|' | '&' | TK_OC_AND | TK_OC_OR;
+// Um operador unario pode ser:
+// Positivo, negativo, negacao, acesso a endereco, resolucao, avaliacao e acesso a hash
+operador_unario: '+' | '-' | '!' | '&' | '*' | '?' | '#';
 
 %%
 
