@@ -1,5 +1,6 @@
 %{
 #include <stdio.h>
+
 int yylex(void);
 int get_line_number();
 void yyerror (char const *s);
@@ -84,7 +85,7 @@ literal_logico: TK_LIT_TRUE | TK_LIT_FALSE;
 // Um tipo estatico valido pode ser:
 // A palavra STATIC seguida de um tipo, ou apenas o tipo
 tipo_estatico: TK_PR_STATIC tipo | tipo;
-                           
+
 // Um tipo const pode ser:
 // A palavra CONST seguida de um tipo, ou apenas o tipo
 tipo_const: TK_PR_CONST tipo | tipo;
@@ -101,16 +102,16 @@ tipo_const_estatico:    tipo |                          // Apenas o tipo
 
 // Uma declaracao de variavel global e: 
 // Um tipo estatico, seguido de uma lista de identificadores, terminada por ;
-var_global: tipo_estatico lista_identificadores_globais ';';
+var_global: tipo_estatico lista_identificadores_globais ';' ;
 
 // Uma lista de identificadores globais pode ser:
 lista_identificadores_globais:  identificador_global |                                     // Um identificador
-                                identificador_global ',' lista_identificadores_globais;    // Um identificador, seguido de uma lista de identificadores, separados por ,
-                                
+                                identificador_global ',' lista_identificadores_globais ;    // Um identificador, seguido de uma lista de identificadores, separados por ,
+
 // Um identificador global pode ser:
 identificador_global:   TK_IDENTIFICADOR |                  // Um identificador simples
                         TK_IDENTIFICADOR '[' TK_LIT_INT ']';// Um vetor, com seu tamanho inteiro positivo entre colchetes a direita
-     
+
 //================================================================================================
 //                                  DECLARACOES DE FUNCOES:
 //================================================================================================
@@ -177,9 +178,12 @@ chamada_funcao: TK_IDENTIFICADOR '(' lista_argumentos ')' | // O nome da funcao,
 //================================================================================================
 
 // Uma variavel local pode ser:
-var_local:  tipo_const_estatico TK_IDENTIFICADOR |  // Um tipo CONST STATIC, um identificador simples (nao vetor)
+var_local:  tipo_const_estatico lista_identificadores_locais |  // Um tipo CONST STATIC, um identificador simples (nao vetor)
             tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE literal | // Um tipo CONST STATIC, um identificador simples, e '<=' seguido de um literal
             tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR; // Um tipo CONST STATIC, um identificador simples, e '<=' seguido de um identificador
+
+lista_identificadores_locais:  TK_IDENTIFICADOR |                                     // Um identificador
+                               TK_IDENTIFICADOR ',' lista_identificadores_locais ;    // Um identificador, seguido de uma lista de identificadores, separados por ,
 
 // Uma atribuicao pode ser:
 atribuicao: TK_IDENTIFICADOR '=' expressao |                    // Uma atribuicao a um identificador simples
@@ -206,7 +210,7 @@ comando_shift:  TK_IDENTIFICADOR operador_shift TK_LIT_INT |                 // 
 controle_fluxo: comando_if |
                 comando_for |
                 comando_while;
-                
+
 // Um comando if pode ser:
 comando_if: TK_PR_IF '(' expressao ')' bloco_comandos | // A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos
             TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos;    // A palavra if, com uma expressao entre parenteses e seguida de um bloco de comandos. Adicionalmente, um else seguido de um bloco de comandos no final
