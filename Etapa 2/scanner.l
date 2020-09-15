@@ -92,6 +92,7 @@ comentario_multilinha_fim    "*/"
 "^"         {return '^';}
 "."         {return '.';}
 "$"         {return '$';}
+"?"         {return '?';}
 
     /* Operadores Compostos */
 "<="        {return TK_OC_LE;}

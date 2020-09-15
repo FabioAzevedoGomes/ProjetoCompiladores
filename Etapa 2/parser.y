@@ -3,7 +3,7 @@
 
 int yylex(void);
 int get_line_number();
-void yyerror (char const *s);
+int yyerror (char const *s);
 %}
 
 %token TK_PR_INT
@@ -255,8 +255,8 @@ comparador_relacional: TK_OC_GE | TK_OC_LE | TK_OC_EQ | TK_OC_NE;
 operador_logico: TK_OC_AND | TK_OC_OR;
 
 // Um operador binario de baixa precedencia pode ser:
-// Soma, subtracao, bitwise or, bitwise and, comparadores relacionais e operadores logicos
-operador_binario_baixa_prec: '+' | '-' | '|' | '&' | comparador_relacional | operador_logico;
+// Soma, subtracao, bitwise or, bitwise and, comparadores relacionais e operadores logicos. Tambem aceita a 'parte' interna do operador ternario
+operador_binario_baixa_prec: '+' | '-' | '|' | '&' | comparador_relacional | operador_logico | '?' expressao ':';
 
 // Um operador binario de alta precedencia pode ser:
 // Multiplicacao, divisao, modulo e exponenciacao
@@ -269,7 +269,8 @@ operador_unario: '+' | '-' | '!' | '&' | '*' | '?' | '#';
 %%
 
 // Funcao para casos de erro
-void yyerror(char const *s)
+int yyerror(char const *s)
 {
     printf("%s : On line %d\n",s, get_line_number());
+    return 1;
 }
