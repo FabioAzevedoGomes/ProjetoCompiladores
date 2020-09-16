@@ -1,11 +1,20 @@
 %{
-#include <stdio.h>
+    #include <stdio.h>
 
-int yylex(void);
-int get_line_number();
-int yyerror (char const *s);
+    /* Funcao de obtencao dos tokens */
+    int yylex(void);
+    
+    /* Funcao que retorna a linha atual */
+    int get_line_number();
+    
+    /* Funcao de tratamento de erro */
+    int yyerror (char const *s);
 %}
 
+/* Define o relatorio de erro como verboso */
+%define parse.error verbose
+
+/* Tokens */
 %token TK_PR_INT
 %token TK_PR_FLOAT
 %token TK_PR_BOOL
@@ -58,219 +67,336 @@ int yyerror (char const *s);
 %%
 
 // Um programa pode ser:
-programa:   %empty |                // Vazio
-            funcao programa |       // Uma funcao, seguida de mais programa
-            var_global programa;    // Uma definicao de variavel global, seguida de mais programa
+programa:   /* empty */                 // Vazio
+          | declaracao_funcao programa  // Uma declaracao de funcao, seguida de mais programa
+          | var_global programa         // Uma definicao de variavel global, seguida de mais programa
+;
 
-//================================================================================================
-//                                  TIPOS E LITERAIS:
-//================================================================================================
+
+// TIPOS E LITERAIS
+
 
 // Um tipo valido pode ser:
-// INT, FLOAT, CHAR, BOOL ou STRING
-tipo: TK_PR_INT | TK_PR_FLOAT | TK_PR_CHAR | TK_PR_BOOL | TK_PR_STRING; 
+tipo:   TK_PR_INT       // A palavra int
+      | TK_PR_FLOAT     // A palavra float
+      | TK_PR_CHAR      // A palavra char
+      | TK_PR_BOOL      // A palavra bool
+      | TK_PR_STRING    // A palavra string
+; 
 
 // Um literal valido pode ser:
-// Um literal aritmetico, um literal logico, CHAR ou STRING
-literal: literal_aritmetico | literal_logico | TK_LIT_CHAR | TK_LIT_STRING;
-
-// Um literal aritmetico pode ser:
-// Int ou float
-literal_aritmetico: TK_LIT_INT | TK_LIT_FLOAT;
-
-// Um literal logico pode ser:
-// True ou false
-literal_logico: TK_LIT_TRUE | TK_LIT_FALSE;
+literal:   TK_LIT_INT       // Um literal aritmetico
+         | TK_LIT_FLOAT     // Um literal logico
+         | TK_LIT_TRUE      // Um literal boolean true
+         | TK_LIT_FALSE     // Um literal boolean false
+         | TK_LIT_CHAR      // Um literal char
+         | TK_LIT_STRING    // Um literal string
+;
 
 // Um tipo estatico valido pode ser:
-// A palavra STATIC seguida de um tipo, ou apenas o tipo
-tipo_estatico: TK_PR_STATIC tipo | tipo;
+tipo_estatico:   TK_PR_STATIC tipo // A palavra static, seguida de um tipo
+               | tipo              // Apenas um tipo
+;
 
 // Um tipo const pode ser:
-// A palavra CONST seguida de um tipo, ou apenas o tipo
-tipo_const: TK_PR_CONST tipo | tipo;
+tipo_const:   TK_PR_CONST tipo  // A palavra const, seguida de um tipo
+            | tipo              // Apenas um tipo
+;
 
 // Um tipo const estatico pode ser:
-tipo_const_estatico:    tipo |                          // Apenas o tipo
-                        TK_PR_STATIC tipo |             // A palavra STATIC seguida do tipo
-                        TK_PR_CONST tipo |              // A palavra CONST seguida do tipo
-                        TK_PR_CONST TK_PR_STATIC tipo;  // Ambas as palavras CONST e STATIC, seguidas do tipo
+tipo_const_estatico:   tipo                          // Apenas um tipo
+                     | TK_PR_STATIC tipo             // A palavra static seguida de um tipo
+                     | TK_PR_CONST tipo              // A palavra const seguida de um tipo
+                     | TK_PR_CONST TK_PR_STATIC tipo // A palavra const e static, seguidas de um tipo
+;
 
-//================================================================================================
-//                                  DECLARACAO DE VARIAVEIS GLOBAIS:
-//================================================================================================
 
-// Uma declaracao de variavel global e: 
-// Um tipo estatico, seguido de uma lista de identificadores, terminada por ;
+// DECLARACAO DE VARIAVEIS GLOBAIS
+
+
+/**
+ * Uma declaracao de variavel global e:
+ *
+ * Um tipo possivelmente estatico...
+ * ... seguido de uma lista de identificadores...
+ * ... e terminado por ponto e virgula (;)
+ */ 
 var_global: tipo_estatico lista_identificadores_globais ';' ;
 
-// Uma lista de identificadores globais pode ser:
-lista_identificadores_globais:  identificador_global |                                     // Um identificador
-                                identificador_global ',' lista_identificadores_globais ;    // Um identificador, seguido de uma lista de identificadores, separados por ,
+/**
+ * Uma lista de identificadores globais pode ser:
+ *
+ * Apenas um identificador
+ *  OU
+ * Um identificador, seguido de uma lista de identificadores, separados por virgula
+ */
+lista_identificadores_globais:   identificador_global
+                               | identificador_global ',' lista_identificadores_globais
+; 
 
 // Um identificador global pode ser:
 identificador_global:   TK_IDENTIFICADOR |                  // Um identificador simples
-                        TK_IDENTIFICADOR '[' TK_LIT_INT ']';// Um vetor, com seu tamanho inteiro positivo entre colchetes a direita
+                        TK_IDENTIFICADOR '[' TK_LIT_INT ']' // Um vetor, com seu tamanho inteiro positivo entre colchetes a direita
+;
 
-//================================================================================================
-//                                  DECLARACOES DE FUNCOES:
-//================================================================================================
 
-// Uma funcao e:
-// Um tipo estatico de retorno, seguido pelo nome da funcao e sua assinatura, terminada por um bloco de comandos SEM ponto e virgula final
-funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos;
+// DECLARACAO DE FUNCOES
+
+
+/**
+ * Uma declaracao de funcao e:
+ * Um tipo estatico de retorno...
+ * ...seguido pelo nome da funcao e sua assinatura ...
+ * ... terminada por um bloco de comandos
+ */
+declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos;
 
 // A assinatura de uma funcao pode ser:
-assinatura: '(' ')' |                   // Vazia, sendo caracterizada apenas pelos parenteses
-            '(' lista_parametros ')';   // Um ou mais parametros entre parenteses
+assinatura:   '(' ')'                    // Vazia, sendo caracterizada apenas pelos parenteses
+            | '(' lista_parametros ')'   // Um ou mais parametros entre parenteses
+;
 
 // Uma lista de parametros de uma funcao pode ser:
-lista_parametros:   parametro |                     // Um unico parametro
-                    parametro ',' lista_parametros; // Um parametro seguido de uma lista de parametros, separados por virgulas
+lista_parametros:   parametro                      // Um unico parametro
+                  | parametro ',' lista_parametros // Um parametro seguido de uma lista de parametros, separados por virgula
+;
 
-// Um parametro de uma funcao e:
-// Um tipo que pode ser const, seguido de seu nome ( Nao pode ser vetor )
+/**
+ * Um parametro de uma funcao e:
+ *
+ * Um tipo possivelmente const ... 
+ * ... seguido de seu nome
+ *
+ * OBS.: Nao pode ser vetor
+ */
 parametro: tipo_const TK_IDENTIFICADOR;
 
 
-//================================================================================================
-//                            COMANDOS SIMPLES E BLOCOS DE COMANDOS:
-//================================================================================================
+// COMANDOS SIMPLES E BLOCOS DE COMANDOS
+
 
 // Um bloco de comandos pode ser:
-bloco_comandos: '{' '}'| // Vazio, sendo caracterizado apenas pelas chaves
-                '{' lista_comandos_simples '}'; // Uma lista de comandos simples
+bloco_comandos:   '{' '}'                        // Vazio, sendo caracterizado apenas pelas chaves
+                | '{' lista_comandos_simples '}' // Uma lista de comandos simples
+;
 
 // Uma lista de comandos simples pode ser:
-lista_comandos_simples: comando_simples |                       // Um unico comando simples
-                        comando_simples lista_comandos_simples; // Um comando simples, seguido de uma lista de comandos simples,
+lista_comandos_simples:   comando_simples                         // Um unico comando simples
+                        | comando_simples lista_comandos_simples; // Um comando simples, seguido de uma lista de comandos simples
 
 // Um comando simples pode ser:
-comando_simples:    controle_fluxo |                // Um comando de controle de fluxo (Sem ; no final)
-                    TK_PR_RETURN expressao ';'|     // Um return, seguido de uma expressao
-                    TK_PR_BREAK   ';'|              // Um break
-                    TK_PR_CONTINUE ';'|             // Um continue
-                    comando_shift ';'|              // Um comando de shift
-                    chamada_funcao ';'|             // Uma chamada de funcao
-                    comando_es ';'|                 // Um comando de e/s
-                    atribuicao ';'|                 // Uma atribuicao
-                    var_local ';'|                  // Uma variavel local
-                    bloco_comandos ';';             // Um bloco de comandos
+comando_simples:   controle_fluxo             // Um comando de controle de fluxo (Sem ; no final)
+                 | TK_PR_RETURN expressao ';' // Um return, seguido de uma expressao e terminado por ponto e virgula (;)
+                 | TK_PR_BREAK   ';'          // Um break, terminado por ponto e virgula (;)
+                 | TK_PR_CONTINUE ';'         // Um continue, terminado por ponto e virgula (;)
+                 | comando_shift ';'          // Um comando de shift, terminado por ponto e virgula (;)
+                 | chamada_funcao ';'         // Uma chamada de funcao, terminada por ponto e virgula (;)
+                 | comando_es ';'             // Um comando de e/s, terminado por ponto e virgula (;)
+                 | atribuicao ';'             // Uma atribuicao, terminada por ponto e virgula (;)
+                 | var_local ';'              // Uma declaracao de variavel local, terminada por ponto e virgula (;)
+                 | bloco_comandos ';'         // Um bloco de comandos, terminado por ponto e virgula (;)
+;
 
-//================================================================================================
-//                                          CHAMADA DE FUNCAO:
-//================================================================================================
 
-// Uma chamada de funcao e:
-chamada_funcao: TK_IDENTIFICADOR '(' lista_argumentos ')' | // O nome da funcao, seguida de uma lista de argumentos entre parenteses
-                TK_IDENTIFICADOR '(' ')'; // O nome da funcao, seguido de parenteses (caso a lista de arugmentos seja vazia
+// CHAMADA DE FUNCAO
+
+
+/** 
+ * Uma chamada de funcao e:
+ *
+ * O nome da funcao, seguido de parenteses sem argumentos
+ *  OU
+ * O nome da funcao, seguido de parenteses e uma lista de argumentos
+ */
+chamada_funcao:   TK_IDENTIFICADOR '(' ')'
+                | TK_IDENTIFICADOR '(' lista_argumentos ')'
+;
 
 // Uma lista de argumentos pode ser:
-lista_argumentos:   expressao |                     // Um unico argumento
-                    expressao ',' lista_argumentos; // Um argumento seguido de uma lista de argumentos, separados por ,
+lista_argumentos:   argumento                      // Um unico argumento
+                  | argumento ',' lista_argumentos // Um argumento seguido de uma lista de argumentos, separados por virgula
+;
 
-//================================================================================================
-//                                              COMANDOS SIMPLES:
-//================================================================================================
+// Um argumento pode ser:
+argumento: expressao; // Uma expressao
 
-// Uma variavel local pode ser:
-var_local:  tipo_const_estatico lista_identificadores_locais |  // Um tipo CONST STATIC, um identificador simples (nao vetor)
-            tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE literal | // Um tipo CONST STATIC, um identificador simples, e '<=' seguido de um literal
-            tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR; // Um tipo CONST STATIC, um identificador simples, e '<=' seguido de um identificador
 
-lista_identificadores_locais:  TK_IDENTIFICADOR |                                     // Um identificador
-                               TK_IDENTIFICADOR ',' lista_identificadores_locais ;    // Um identificador, seguido de uma lista de identificadores, separados por ,
+// COMANDOS SIMPLES
+
+
+/**
+ * Uma declaracao de variavel local pode ser:
+ *
+ * Um tipo possivelmente const static, seguido de uma lista de identificadores
+ *  OU
+ * Um tipo possivelmente const static, seguido de um identificador simples...
+ * ... sendo inicializada com '<=' e um literal
+ *  OU
+ * Um tipo possivelmente const static, seguido de um identificador simples...
+ * ... sendo inicializado com '<=' e um identificador
+ */
+var_local:   tipo_const_estatico lista_identificadores_locais
+           | tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE literal
+           | tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
+;
+
+/**
+ * Uma lista de identificadores locais pode ser:
+ *
+ * Um identificador
+ *  OU
+ * Um identificador, seguido de uma lista de identificadores, separados por virgula
+ */
+lista_identificadores_locais:   TK_IDENTIFICADOR
+                              | TK_IDENTIFICADOR ',' lista_identificadores_locais
+;
 
 // Uma atribuicao pode ser:
-atribuicao: TK_IDENTIFICADOR '=' expressao |                    // Uma atribuicao a um identificador simples
-            TK_IDENTIFICADOR '[' expressao ']' '=' expressao;   // Uma atribuicao a um vetor indexado por uma expressao
+atribuicao:   TK_IDENTIFICADOR '=' expressao                   // Uma atribuicao a um identificador simples
+            | TK_IDENTIFICADOR '[' expressao ']' '=' expressao // Uma atribuicao a um vetor indexado por uma expressao
+;
 
 // Um comando de entrada ou saida pode ser:
-comando_es: TK_PR_INPUT TK_IDENTIFICADOR |  // A palavra input, seguida de um identificador
-            TK_PR_OUTPUT TK_IDENTIFICADOR | // A palavra output, seguida de um identificador
-            TK_PR_OUTPUT literal;           // A palavra output, seguida de um literal
+comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  // A palavra input, seguida de um identificador
+            | TK_PR_OUTPUT TK_IDENTIFICADOR // A palavra output, seguida de um identificador
+            | TK_PR_OUTPUT literal          // A palavra output, seguida de um literal
+;
 
 // Um operador de shift pode ser:
-// Um operador de shift left (<<) ou shift right (>>)
-operador_shift: TK_OC_SL | TK_OC_SR;
+operador_shift:   TK_OC_SL // O operador de shift left (<<) 
+                | TK_OC_SR // O operador de shift right (>>)
+;
 
-// Um comando de shift pode ser:
-comando_shift:  TK_IDENTIFICADOR operador_shift TK_LIT_INT |                 // Um identificador seguido de um operador de shift e um literal inteiro positivo
-                TK_IDENTIFICADOR '[' expressao ']' operador_shift TK_LIT_INT;// Um vetor indexado por uma expressao, seguido de um operador de shift e um literal inteiro positivo
+/**
+* Um comando de shift pode ser:
+*
+* Um identificador, seguido de um operador de shift e um literal inteiro positivo
+*  OU
+* Um vetor indexado por uma expressao, seguido de um operador de shift e um literal inteiro positivo
+*/
+comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT
+               | TK_IDENTIFICADOR '[' expressao ']' operador_shift TK_LIT_INT
+;
 
-//================================================================================================
-//                                         CONTROLE DE FLUXO:
-//================================================================================================
+
+// COMANDOS DE CONTROLE DE FLUXO
+
 
 // Um comando de controle de fluxo pode ser:
-controle_fluxo: comando_if |
-                comando_for |
-                comando_while;
+controle_fluxo:   comando_if    // Um comando if
+                | comando_for   // Um comando for
+                | comando_while // Um comando while
+;
 
-// Um comando if pode ser:
-comando_if: TK_PR_IF '(' expressao ')' bloco_comandos | // A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos
-            TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos;
+/**
+ * Um comando if pode ser:
+ *
+ * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos
+ *  OU
+ * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos...
+ * ... terminado com a palavra else, seguida de um bloco de comandos
+ */
+comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos
+            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos
+;
 
-// Um comando for pode ser:
-// A palavra for, seguida de, entre parenteses, uma atribuicao, expressao e atribuicao, separados por :, e por fim um bloco de comandos
+/**
+ * Um comando for e:
+ *
+ * A palavra for, seguida de, entre parenteses, ...
+ * ... uma atribuicao, expressao e atribuicao, nessa ordem, separados por dois pontos (:)
+ * ... terminado por um bloco de comandos
+ */
 comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos;
 
-// Um comando while pode ser:
-// A palavra while, seguida de uma expressao entre parenteses, a palavra do e um bloco de comandos
+/**
+ * Um comando while pode ser:
+ *
+ * A palavra while, seguida de uma expressao entre parenteses...
+ * ... terminado pela palavra do, seguida de um bloco de comandos
+ */
 comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos;
 
-//================================================================================================
-//                                      EXPRESSOES:
-//================================================================================================
+
+// EXPRESSOES
+
 
 // Uma expressao pode ser:
-// Uma expressao operada junto a um termo, atraves de operadores de baixa precedencia, ou apenas um termo
-expressao: expressao operador_binario_baixa_prec termo | termo;
+expressao:   expressao operador_binario_baixa_prec termo // Uma expressao associada a um termo, atraves de um operador de baixa precedencia
+           | termo                                       // Apenas um termo
+;
 
 // Um termo pode ser:
-// Um termo operado junto a um fator, atraves de operadores de alta precedencia, ou apenas um fator
-termo: termo operador_binario_alta_prec fator | fator;
+termo:   termo operador_binario_alta_prec fator // Um termo associado a um fator, atraves de um operador de alta precedencia
+       | fator                                  // Apenas um fator
+;
 
 // Um fator pode ser:
-// Uma expressao entre parenteses, ou apenas um operando
-fator: '(' expressao ')' | operando;
-           
-// Um operando pode ser:
-operando:  TK_IDENTIFICADOR |                   // Um identificador
-           TK_IDENTIFICADOR '[' expressao ']' | // Um vetor indexado por uma expressao
-           TK_LIT_INT |                         // Um literal inteiro
-           TK_LIT_FLOAT |                       // Um literal float
-           chamada_funcao |                     // Uma chamada de funcao
-           TK_LIT_TRUE |                        // Um literal TRUE
-           TK_LIT_FALSE |                       // Um literal FALSE
-           operador_unario fator;               // Um operador unario aplicado a um fator
+fator:   '(' expressao ')' // Uma expressao entre parenteses
+       | operando          // Um operando valido da linguagem
+;
 
+// Um operando pode ser:
+operando:   TK_IDENTIFICADOR                   // Um identificador
+          | TK_IDENTIFICADOR '[' expressao ']' // Um vetor indexado por uma expressao
+          | TK_LIT_INT                         // Um literal inteiro
+          | TK_LIT_FLOAT                       // Um literal float
+          | chamada_funcao                     // Uma chamada de funcao
+          | TK_LIT_TRUE                        // Um literal TRUE
+          | TK_LIT_FALSE                       // Um literal FALSE
+          | operador_unario fator              // Um operador unario aplicado a um fator
+;
 
 // Um comparador relacional pode ser:
-// Maior ou igual, menor ou igual, igual, ou diferente
-comparador_relacional: TK_OC_GE | TK_OC_LE | TK_OC_EQ | TK_OC_NE;
+comparador_relacional:   TK_OC_GE // O comparador de maior ou igual (>=)
+                       | TK_OC_LE // O comparador de menor ou igual (<=)
+                       | TK_OC_EQ // O comparador de igualdade (==)
+                       | TK_OC_NE // O comparador de diferenca (!=)
+;
 
 // Um operador logico pode ser:
-// And ou Or
-operador_logico: TK_OC_AND | TK_OC_OR;
+operador_logico:   TK_OC_AND // O operdor AND (&&)
+                 | TK_OC_OR  // O operador OR (||)
+;
 
 // Um operador binario de baixa precedencia pode ser:
-// Soma, subtracao, bitwise or, bitwise and, comparadores relacionais e operadores logicos. Tambem aceita a 'parte' interna do operador ternario
-operador_binario_baixa_prec: '+' | '-' | '|' | '&' | comparador_relacional | operador_logico | '?' expressao ':';
+operador_binario_baixa_prec:   '+'                   // O operador de soma
+                             | '-'                   // O operador de subtracao
+                             | '|'                   // O operador bitwise or
+                             | '&'                   // O operador bitwise and
+                             | comparador_relacional // Um comparador relacional 
+                             | operador_logico       // Um operador logico
+                             | '?' expressao ':'     // A 'parte' interna de uma expressao condicional
+;
 
 // Um operador binario de alta precedencia pode ser:
-// Multiplicacao, divisao, modulo e exponenciacao
-operador_binario_alta_prec: '*' | '/' | '%' | '^';
+operador_binario_alta_prec:   '*' // O operador de multiplicacao
+                            | '/' // O operador de divisao
+                            | '%' // O operador de modulo
+                            | '^' // O operador de exponenciacao
+;
 
 // Um operador unario pode ser:
-// Positivo, negativo, negacao, acesso a endereco, resolucao, avaliacao e acesso a hash
-operador_unario: '+' | '-' | '!' | '&' | '*' | '?' | '#';
+operador_unario:   '+' // O operador de positividade explicita
+                 | '-' // O operador de inversao de sinal
+                 | '!' // O operador de negacao
+                 | '&' // O operador de acesso a endereco
+                 | '*' // O operador de resolucao de ponteiros
+                 | '?' // O operador de avaliacao de expressao
+                 | '#' // O operador de acesso a tabela hash
+;
 
 %%
+    /* FUNCOES OPCIONAIS */
 
-// Funcao para casos de erro
+/* Funcao para casos de erro */
 int yyerror(char const *s)
 {
-    printf("%s : On line %d\n",s, get_line_number());
-    return 1;
+    int error_line = get_line_number(); // Linha onde ocorreu o erro
+    
+    /* Sinaliza na saida padrao que ocorreu um erro sintatico */
+    fprintf(stderr,"%s\nOn line %d\n", s, error_line);
+    
+    /* Retorna a linha onde ocorreu o erro*/
+    return error_line;
 }
