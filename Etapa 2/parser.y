@@ -352,6 +352,8 @@ comparador_relacional:   TK_OC_GE // O comparador de maior ou igual (>=)
                        | TK_OC_LE // O comparador de menor ou igual (<=)
                        | TK_OC_EQ // O comparador de igualdade (==)
                        | TK_OC_NE // O comparador de diferenca (!=)
+                       | '<'      // O comparador de menor
+                       | '>'      // O comparador de maior
 ;
 
 // Um operador logico pode ser:
