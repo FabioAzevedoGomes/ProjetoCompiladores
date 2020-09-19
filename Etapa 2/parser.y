@@ -296,8 +296,8 @@ controle_fluxo:   comando_if    // Um comando if
  * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos...
  * ... terminado com a palavra else, seguida de um bloco de comandos
  */
-comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos
-            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos
+comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos ';'
+            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos ';'
 ;
 
 /**
@@ -307,7 +307,7 @@ comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos
  * ... uma atribuicao, expressao e atribuicao, nessa ordem, separados por dois pontos (:)
  * ... terminado por um bloco de comandos
  */
-comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos;
+comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos ';';
 
 /**
  * Um comando while pode ser:
@@ -315,7 +315,7 @@ comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_com
  * A palavra while, seguida de uma expressao entre parenteses...
  * ... terminado pela palavra do, seguida de um bloco de comandos
  */
-comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos;
+comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos ';';
 
 
 // EXPRESSOES
