@@ -225,30 +225,36 @@ argumento: expressao; // Uma expressao
 
 
 /**
- * Uma declaracao de variavel local pode ser:
+ * Uma declaracao de variavel local e:
  *
- * Um tipo possivelmente const static, seguido de uma lista de identificadores
- *  OU
- * Um tipo possivelmente const static, seguido de um identificador simples...
- * ... sendo inicializada com '<=' e um literal
- *  OU
- * Um tipo possivelmente const static, seguido de um identificador simples...
- * ... sendo inicializado com '<=' e um identificador
+ * Um tipo possivelmente const static, ...
+ * ... seguido de uma lista de identificadores
  */
-var_local:   tipo_const_estatico lista_identificadores_locais
-           | tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE literal
-           | tipo_const_estatico TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
-;
+var_local:   tipo_const_estatico lista_identificadores_locais;
 
 /**
  * Uma lista de identificadores locais pode ser:
  *
- * Um identificador
+ * Um identificador local
  *  OU
- * Um identificador, seguido de uma lista de identificadores, separados por virgula
+ * Um identificador local, seguido de uma lista de identificadores locais, separados por virgula
  */
-lista_identificadores_locais:   TK_IDENTIFICADOR
-                              | TK_IDENTIFICADOR ',' lista_identificadores_locais
+lista_identificadores_locais:   identificador_local
+                              | identificador_local ',' lista_identificadores_locais
+;
+
+/**
+ * Um identificador local pode ser:
+ *
+ * Um identificador simples
+ *  OU
+ * Um identificador simples inicializado com um literal
+ *  OU
+ * Um identificador simples inicializado com outro identificador simples
+ */
+identificador_local:   TK_IDENTIFICADOR
+                     | TK_IDENTIFICADOR TK_OC_LE literal
+                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR
 ;
 
 // Uma atribuicao pode ser:
