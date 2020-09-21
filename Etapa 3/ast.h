@@ -1,4 +1,15 @@
 #include <stdio.h>
+#include "data_types.h"
+
+/**
+ * Nodo da arvore de sintaxe abstrata que sera gerada 
+ */
+typedef struct node
+{
+    valor_lexico_t valor_lexico; // Informacoes deste nodo
+    struct node**       filhos;       // Ponteiro para a lista de filhos deste nodo
+
+}node_t;
 
 /* 
  * Exporta a arvore de sintaxe abstrata (AST) para um arquivo CSV e a printa

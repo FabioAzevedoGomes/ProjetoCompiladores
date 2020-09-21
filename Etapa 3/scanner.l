@@ -1,8 +1,11 @@
         /* DEFINICOES */
 %{
+    #include "data_types.h"
     #include "parser.tab.h"
+
     /* Linha atual do scanner */
     int current_line = 1;
+
 %}
 
     /* Expressoes Regulares*/
@@ -149,5 +152,4 @@ caractere_especial ","|";"|":"|"("|")"|"["|"]"|"{"|"}"|"+"|"-"|"|"|"*"|"/"|"<"|"
 
 int get_line_number(void){
     return current_line;
-} 
-
+}

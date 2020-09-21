@@ -1,5 +1,6 @@
 %{
     #include <stdio.h>
+    #include "data_types.h"
 
     /* Funcao de obtencao dos tokens */
     int yylex(void);
@@ -10,6 +11,12 @@
     /* Funcao de tratamento de erro */
     int yyerror (char const *s);
 %}
+
+/* Union que representa o valor lexico do token*/
+%union{
+    valor_lexico_t valor_lexico; // Valor lexico do token 
+    
+}
 
 /* Define o relatorio de erro como verboso */
 %define parse.error verbose
