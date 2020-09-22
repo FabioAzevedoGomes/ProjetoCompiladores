@@ -15,10 +15,21 @@ union Valores_Token
 /**
  * Struct que representa o valor lexico de um token
  */
-typedef struct valor_lexico  
+typedef struct valor_lexico
 {
     int                 linha_ocorrencia;   // Linha onde este token ocorreu
     int                 tipo;               // Tipo deste token
     union Valores_Token valor;              // Valor deste token
 
 }valor_lexico_t;
+
+/**
+ * Nodo da arvore de sintaxe abstrata que sera gerada 
+ */
+typedef struct node
+{
+    valor_lexico_t*     valor_lexico; // Informacoes deste nodo
+    struct node*        filhos;       // Ponteiro para o primeiro filho deste nodo
+    struct node*        irmao;        // Ponteiro para o proximo irmao deste nodo (next)
+
+}node_t;

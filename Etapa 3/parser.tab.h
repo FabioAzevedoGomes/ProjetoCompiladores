@@ -98,11 +98,12 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 16 "parser.y" /* yacc.c:1909  */
+#line 18 "parser.y" /* yacc.c:1909  */
 
-    valor_lexico_t valor_lexico; // Valor lexico do token 
+    node_t* nodo;                 // Nodo do token
+    valor_lexico_t* valor_lexico; // Valor lexico do token 
 
-#line 106 "parser.tab.h" /* yacc.c:1909  */
+#line 107 "parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

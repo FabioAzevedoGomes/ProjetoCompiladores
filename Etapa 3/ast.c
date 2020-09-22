@@ -1,28 +1,37 @@
 #include "ast.h"
 
-extern void exporta(void *arvore)
+extern void exporta(void* arvore)
 {
     // So exporta arvores que existem
     if (arvore != NULL)
     {
-        // Imprime a informacao do nodo atual
-        imprime_no(arvore);
+        // Imprime a informacao dos nodos da arvore
+        imprime_nos_arvore(arvore);
 
-        // Realiza a busca em profundidade imprimindo seus filhos
-        exporta(((node_t*)arvore)->filhos);
-
-        // Realiza a busca em profundidade imprimindo seus irmaos
-        exporta(((node_t*)arvore)->irmao);
+        // Imprime a informacao das arestas da arvore
+        imprime_arestas_arvore(arvore);
     }
 }
 
-extern void libera(void *arvore)
+extern void libera(void* arvore)
 {
     // Remove todos os nodos da arvore de forma recursiva
     remove_no(arvore);
 }
 
-extern node_t* insere_no(void *arvore, valor_lexico_t* valor_lexico)
+extern node_t* insere_pai(void* arvore, valor_lexico_t* valor_lexico)
+{
+    // Cria um nodo novo e inicializa com os valores
+    node_t* nodo = (node_t*)malloc(sizeof(node_t));
+    nodo->valor_lexico = valor_lexico;
+    nodo->filhos = arvore;
+    nodo->irmao  = NULL;
+
+    // Retorna este novo nodo
+    return nodo;
+}
+
+extern node_t* insere_filho(void* arvore, valor_lexico_t* valor_lexico)
 {
     // Cria um nodo novo e inicializa com os valores
     node_t* nodo = (node_t*)malloc(sizeof(node_t));
@@ -62,7 +71,7 @@ extern node_t* insere_no(void *arvore, valor_lexico_t* valor_lexico)
     return nodo;
 }
 
-extern node_t* remove_no(void *arvore)
+extern node_t* remove_no(void* arvore)
 {
     // Ponteiros auxiliares
     node_t* aux_1 = NULL;
@@ -101,22 +110,59 @@ extern node_t* remove_no(void *arvore)
         // Salva o primeiro irmao desta arvore
         aux_1 = ((node_t*)arvore)->irmao;
 
+        // Remove a estrutura de valor lexico deste nodo
+        free(((node_t*)arvore)->valor_lexico);
+
         // Remove o nodo informado
         free(arvore);
+
+        printf("No removido \n");
     }
 
     // Retorna o primeiro irmao desta arvore, se existir
     return aux_1;
 }
 
-extern void imprime_no(void *arvore)
+void imprime_nos_arvore(void* arvore)
+{
+    // So imprime arvores que existem
+    if (arvore != NULL)
+    {
+        // Imprime o nodo atual
+        imprime_no(arvore);
+        
+        // Imprime os filhos do nodo atual
+        imprime_nos_arvore(((node_t*)arvore)->filhos);
+
+        // Imprime os irmaos do nodo atual
+        imprime_nos_arvore(((node_t*)arvore)->irmao);
+    }
+}
+
+void imprime_arestas_arvore(void* arvore)
+{
+    // So imprime arestas de arvores que existem
+    if (arvore != NULL)
+    {
+        // Imprime as arestas do nodo atual
+        imprime_aresta(arvore);
+
+        // Imprime as arestas dos filhos
+        imprime_arestas_arvore(((node_t*)arvore)->filhos);
+    
+        // Imprime as arestas dos irmaos
+        imprime_arestas_arvore(((node_t*)arvore)->irmao);
+    }
+}
+
+void imprime_no(void* arvore)
 {
     // So imprime nodos que existem
     if (arvore != NULL)
     {
-        printf("===== Nodo =====\n");
-        printf("Linha: %d\n",((node_t*)arvore)->valor_lexico->linha_ocorrencia);
-        printf("Tipo:  %d\n",((node_t*)arvore)->valor_lexico->tipo);
+        // Printa on inicio comum a todos os nodos
+        printf("%p [label=\"", (node_t*)arvore);
+
         switch(((node_t*)arvore)->valor_lexico->tipo)
         {
             // Literais
@@ -151,8 +197,32 @@ extern void imprime_no(void *arvore)
             case TK_OC_SL:
             // Caracteres especiais
             default:
-                printf("Valor: %s\n", ((node_t*)arvore)->valor_lexico->valor.nome);
+                printf("%s\n", ((node_t*)arvore)->valor_lexico->valor.nome); // TODO Printar os valores especificados na definicao
                 break;
         }
+        
+        // Printa o final comum a todos os nodos
+        printf("\"];\n");
+    }
+}
+
+void imprime_aresta(void* arvore)
+{
+    // So imprime arestas que existem
+    if (arvore != NULL)
+    {
+        // Ponteiro auxiliar, aponta para o primeiro filhos
+        node_t* aux = ((node_t*)arvore)->filhos;
+
+        // Percorre os filhos do nodo
+        while (aux != NULL)
+        {
+            // Printa o endereco do nodo pai e do filho
+            printf("%p, %p", (node_t*)arvore, aux);
+
+            // Passa para o proximo filho
+            aux = aux->irmao;
+        }
+
     }
 }
