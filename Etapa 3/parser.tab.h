@@ -101,7 +101,7 @@ union YYSTYPE
 #line 18 "parser.y" /* yacc.c:1909  */
 
     node_t* nodo;                 // Nodo do token
-    valor_lexico_t* valor_lexico; // Valor lexico do token 
+    valor_lexico_t valor_lexico; // Valor lexico do token 
 
 #line 107 "parser.tab.h" /* yacc.c:1909  */
 };

@@ -168,40 +168,38 @@ void atrib_lexico(int tipo)
     char x; 
     int i;
 
-    // Cria a etrutura de valor lexico
-    yylval.valor_lexico = (valor_lexico_t*)malloc(sizeof(valor_lexico_t));
-
     // Preenche a linha na estrutura valor_lexico da variavel global yylval
-    yylval.valor_lexico->linha_ocorrencia = get_line_number();   // Linha de ocorrencia do token
-    yylval.valor_lexico->tipo = tipo; // Tipo do token
+    yylval.valor_lexico.linha_ocorrencia = get_line_number();   // Linha de ocorrencia do token
+    yylval.valor_lexico.tipo = tipo; // Tipo do token
 
     // Preenche o tipo do token e seu valor na estrutura valor_lexico
+    // TODO Verificar se, apos completa e liberada a AST, a memoria usada pelos strdups e liberada corretamente
     switch(tipo)
     {
         // Literais
         case TK_LIT_CHAR:
             // Remove aspas simples do char antes de copiar
             yytext[2] = '\0';
-            yylval.valor_lexico->valor.caractere = strdup(yytext + 1);
+            yylval.valor_lexico.valor.caractere = *strdup(yytext+1);
             break;
         case TK_LIT_STRING:        
             // Remove aspas duplas da string antes de copiar
             for(x = 'a', i = 0; x != '\0'; i++)
                 x = yytext[i];
             yytext[i-2] = '\0';
-            yylval.valor_lexico->valor.string = strdup(yytext + 1);
+            yylval.valor_lexico.valor.string = strdup(yytext + 1);
             break;
         case TK_LIT_INT:
-            yylval.valor_lexico->valor.inteiro = atoi(yytext);
+            yylval.valor_lexico.valor.inteiro = atoi(yytext);
             break;
         case TK_LIT_FLOAT:
-            yylval.valor_lexico->valor.ponto_flutuante = atof(yytext);
+            yylval.valor_lexico.valor.ponto_flutuante = atof(yytext);
             break;
         case TK_LIT_TRUE:
-            yylval.valor_lexico->valor.booleano = 1; // 1 para representar o booleano true
+            yylval.valor_lexico.valor.booleano = 1; // 1 para representar o booleano true
             break;
         case TK_LIT_FALSE:
-            yylval.valor_lexico->valor.booleano = 0; // 0 para representar o booleano false
+            yylval.valor_lexico.valor.booleano = 0; // 0 para representar o booleano false
             break;
         // Identificadores
         case TK_IDENTIFICADOR:
@@ -216,7 +214,7 @@ void atrib_lexico(int tipo)
         case TK_OC_SL:
         // Caracteres especiais
         default:
-            yylval.valor_lexico->valor.nome = strdup(yytext);
+            yylval.valor_lexico.valor.nome = strdup(yytext);
             break;
 
     }

@@ -11,13 +11,13 @@
     /* Funcao de tratamento de erro */
     int yyerror (char const *s);
 
-    extern void *ast;
+    void *ast;
 %}
 
 /* Union que representa o valor lexico do token*/
 %union{
     node_t* nodo;                 // Nodo do token
-    valor_lexico_t* valor_lexico; // Valor lexico do token 
+    valor_lexico_t valor_lexico; // Valor lexico do token 
 }
 
 /* Define o relatorio de erro como verboso */
@@ -51,23 +51,23 @@
 %token TK_PR_PROTECTED
 %token TK_PR_END
 %token TK_PR_DEFAULT
-%token<valor_lexico->valor.nome>TK_OC_LE
-%token<valor_lexico->valor.nome>TK_OC_GE
-%token<valor_lexico->valor.nome>TK_OC_EQ
-%token<valor_lexico->valor.nome>TK_OC_NE
-%token<valor_lexico->valor.nome>TK_OC_AND
-%token<valor_lexico->valor.nome>TK_OC_OR
-%token<valor_lexico->valor.nome>TK_OC_SL
-%token<valor_lexico->valor.nome>TK_OC_SR
+%token<valor_lexico.valor.nome>TK_OC_LE
+%token<valor_lexico.valor.nome>TK_OC_GE
+%token<valor_lexico.valor.nome>TK_OC_EQ
+%token<valor_lexico.valor.nome>TK_OC_NE
+%token<valor_lexico.valor.nome>TK_OC_AND
+%token<valor_lexico.valor.nome>TK_OC_OR
+%token<valor_lexico.valor.nome>TK_OC_SL
+%token<valor_lexico.valor.nome>TK_OC_SR
 %token TK_OC_FORWARD_PIPE
 %token TK_OC_BASH_PIPE
-%token<valor_lexico->valor.inteiro>TK_LIT_INT
-%token<valor_lexico->valor.ponto_flutuante>TK_LIT_FLOAT
-%token<valor_lexico->valor.booleano>TK_LIT_FALSE
-%token<valor_lexico->valor.booleano>TK_LIT_TRUE
-%token<valor_lexico->valor.caractere>TK_LIT_CHAR
-%token<valor_lexico->valor.string>TK_LIT_STRING
-%token<valor_lexico->valor.nome>TK_IDENTIFICADOR
+%token<valor_lexico.valor.inteiro>TK_LIT_INT
+%token<valor_lexico.valor.ponto_flutuante>TK_LIT_FLOAT
+%token<valor_lexico.valor.booleano>TK_LIT_FALSE
+%token<valor_lexico.valor.booleano>TK_LIT_TRUE
+%token<valor_lexico.valor.caractere>TK_LIT_CHAR
+%token<valor_lexico.valor.string>TK_LIT_STRING
+%token<valor_lexico.valor.nome>TK_IDENTIFICADOR
 %token TOKEN_ERRO
 
 // Simbolo inicial
@@ -419,6 +419,7 @@ int yyerror(char const *s)
     fprintf(stderr,"%s\nOn line %d\n", s, error_line);
     
     // TODO: Liberar toda a memoria da ast sendo criada
+    libera(ast);
 
     /* Retorna a linha onde ocorreu o erro*/
     return error_line;

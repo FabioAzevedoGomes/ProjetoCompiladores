@@ -28,7 +28,7 @@ extern void libera(void* arvore);
  * @param valor_lexico Valor lexico do nodo pai
  * @returns Ponteiro para o nodo pai
  */
-extern node_t* insere_pai(void* arvore, valor_lexico_t* valor_lexico);
+extern void insere_pai(void** arvore, valor_lexico_t* valor_lexico);
 
 /**
  * Insere o nodo na posicao indicada da arvore de sintaxe abstrata fornecida
@@ -38,7 +38,7 @@ extern node_t* insere_pai(void* arvore, valor_lexico_t* valor_lexico);
  * @param valor_lexico Ponteiro para a struct de valor lexico do nodo
  * @returns Ponteiro para o nodo que acaba de ser inserido
  */
-extern node_t* insere_filho(void* arvore, valor_lexico_t* valor_lexico);
+extern void insere_filho(void** arvore, valor_lexico_t* valor_lexico);
 
 /**
  * Remove o nodo na posicao indicada da arvore de sintaxe abstrata fornecida
@@ -47,7 +47,7 @@ extern node_t* insere_filho(void* arvore, valor_lexico_t* valor_lexico);
  * @param arvore Ponteiro para o nodo da arvore de sintaxe abstrata a ser removido
  * @returns Ponteiro para o primeiro irmao deste nodo, ou NULL se nao tiver irmao
  */
-extern node_t* remove_no(void* arvore);
+extern void remove_no(void* arvore);
 
 /**
  * Imprime todos os nodos da arvore informada de acordo com a busca em profundidade
