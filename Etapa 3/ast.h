@@ -1,13 +1,17 @@
 #include <stdio.h>
+#include <stdlib.h>
+
 #include "data_types.h"
+#include "parser.tab.h"
 
 /**
  * Nodo da arvore de sintaxe abstrata que sera gerada 
  */
 typedef struct node
 {
-    valor_lexico_t valor_lexico; // Informacoes deste nodo
-    struct node**       filhos;       // Ponteiro para a lista de filhos deste nodo
+    valor_lexico_t*     valor_lexico; // Informacoes deste nodo
+    struct node*        filhos;       // Ponteiro para o primeiro filho deste nodo
+    struct node*        irmao;        // Ponteiro para o proximo irmao deste nodo (next)
 
 }node_t;
 
@@ -33,7 +37,7 @@ extern void libera(void *arvore);
  * @param arvore Ponteiro para a posicao na arvore de sintaxe abstrata onde este novo nodo deve ser inserido
  * @param TODO Atributos do nodo
  */
-extern void insere_no(void *arvore /* TODO Especificar nodo */);
+extern void insere_no(void *arvore, valor_lexico_t* valor_lexico);
 
 /**
  * Remove o nodo na posicao indicada da arvore de sintaxe abstrata fornecida

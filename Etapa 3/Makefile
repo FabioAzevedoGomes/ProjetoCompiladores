@@ -8,8 +8,8 @@ parser.tab.c:
 lex.yy.c:
 	flex scanner.l
 
-ast.o:
+ast.o: parser.tab.c
 	gcc -c ast.c -o ast.o -Wall
 
 clean:
-	rm lex.yy.c parser.tab.c *.o parser.tab.h etapa3 *.output
+	rm lex.yy.c parser.tab.c *.o etapa3 *.output
