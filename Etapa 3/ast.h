@@ -17,8 +17,9 @@ typedef struct node
 
 /* 
  * Exporta a arvore de sintaxe abstrata (AST) para um arquivo CSV e a printa
- * na saida padrao de acordo com o modelo especificado na secao 2.4
- * da especificacao
+ * na saida padrao a arvore seguindo uma busca em profundidade
+ * Formato de impressao:
+ * TODO
  * @param arvore Ponteiro para a raiz da arvore de sintaxe abstrata que sera exportada
  * 
  */
@@ -35,17 +36,19 @@ extern void libera(void *arvore);
 /**
  * Insere o nodo na posicao indicada da arvore de sintaxe abstrata fornecida
  * @param arvore Ponteiro para a posicao na arvore de sintaxe abstrata onde este novo nodo deve ser inserido
- * @param TODO Atributos do nodo
+ * @param valor_lexico Ponteiro para a struct de valor lexico do nodo
+ * @returns Ponteiro para o nodo que acaba de ser inserido
  */
-extern void insere_no(void *arvore, valor_lexico_t* valor_lexico);
+extern node_t* insere_no(void *arvore, valor_lexico_t* valor_lexico);
 
 /**
  * Remove o nodo na posicao indicada da arvore de sintaxe abstrata fornecida
  * Caso este nodo seja uma folha, simplesmente remove o nodo e libera a memoria
  * Se este nodo for intermediario, remove todos os seus filhos de forma recursiva, tambem liberando a memoria
  * @param arvore Ponteiro para o nodo da arvore de sintaxe abstrata a ser removido
+ * @returns Ponteiro para o primeiro irmao deste nodo, ou NULL se nao tiver irmao
  */
-extern void remove_no(void *arvore);
+extern node_t* remove_no(void *arvore);
 
 /**
  * Imprime as informacoes do nodo na posicao apontada 

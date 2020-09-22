@@ -3,6 +3,7 @@ all: ast.o parser.tab.c lex.yy.c
 	gcc -o etapa3 main.o ast.o lex.yy.o parser.tab.o -lfl -Wall
 
 parser.tab.c:
+	rm parser.tab.h
 	bison -d -v parser.y --report-file parser.output
 
 lex.yy.c:

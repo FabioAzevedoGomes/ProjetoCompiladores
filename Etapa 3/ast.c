@@ -2,25 +2,37 @@
 
 extern void exporta(void *arvore)
 {
+    // So exporta arvores que existem
+    if (arvore != NULL)
+    {
+        // Imprime a informacao do nodo atual
+        imprime_no(arvore);
 
+        // Realiza a busca em profundidade imprimindo seus filhos
+        exporta(((node_t*)arvore)->filhos);
+
+        // Realiza a busca em profundidade imprimindo seus irmaos
+        exporta(((node_t*)arvore)->irmao);
+    }
 }
 
 extern void libera(void *arvore)
 {
-
+    // Remove todos os nodos da arvore de forma recursiva
+    remove_no(arvore);
 }
 
-extern void insere_no(void *arvore, valor_lexico_t* valor_lexico)
+extern node_t* insere_no(void *arvore, valor_lexico_t* valor_lexico)
 {
-    // So insere em nodos que existem
+    // Cria um nodo novo e inicializa com os valores
+    node_t* nodo = (node_t*)malloc(sizeof(node_t));
+    nodo->valor_lexico = valor_lexico;
+    nodo->filhos = NULL;
+    nodo->irmao  = NULL;
+
+    // Se a arvore ja existe, cria o nodo como filho
     if (arvore != NULL)
     {
-        // Cria um nodo novo e inicializa com os valores
-        node_t* nodo = (node_t*)malloc(sizeof(node_t));
-        nodo->valor_lexico = valor_lexico;
-        nodo->filhos = NULL;
-        nodo->irmao  = NULL;
-
         // Insere nos filhos do nodo recebido
         if (((node_t*)arvore)->filhos != NULL)
         {
@@ -40,11 +52,61 @@ extern void insere_no(void *arvore, valor_lexico_t* valor_lexico)
             ((node_t*)arvore)->filhos = nodo;
         }
     }
+    else
+    {
+        // Se a arvore nao existe, utiliza o nodo como raiz
+        arvore = nodo;
+    }
+    
+    // Retorna o nodo inserido
+    return nodo;
 }
 
-extern void remove_no(void *arvore)
+extern node_t* remove_no(void *arvore)
 {
+    // Ponteiros auxiliares
+    node_t* aux_1 = NULL;
+    node_t* aux_2 = NULL;
+    node_t* swap  = NULL;
 
+    // So remove nodos que existem
+    if (arvore != NULL)
+    {
+        // Se este nodo tem filhos
+        if (((node_t*)arvore)->filhos != NULL)
+        {
+            // Inicializa o ponteiro auxiliar 1 no primeiro filho
+            aux_1 = ((node_t*)arvore)->filhos;
+            
+            // Inicializa o ponteiro auxiliar 2 no segundo filho
+            aux_2 = aux_1->irmao;
+
+            // Percorre todos os filhos removendo de forma recursiva
+            while (aux_2 != NULL || aux_1 != NULL)
+            {
+                // Remove o filho i
+                if (aux_1 != NULL) remove_no(aux_1);
+
+                // Atualiza o ponteiro para o filho i+1
+                if (aux_2 != NULL) aux_1 = aux_2->irmao;
+                else aux_1 = NULL;
+
+                // Troca os ponteiros
+                swap = aux_1;
+                aux_1 = aux_2;
+                aux_2 = swap;
+            }
+        }
+
+        // Salva o primeiro irmao desta arvore
+        aux_1 = ((node_t*)arvore)->irmao;
+
+        // Remove o nodo informado
+        free(arvore);
+    }
+
+    // Retorna o primeiro irmao desta arvore, se existir
+    return aux_1;
 }
 
 extern void imprime_no(void *arvore)
