@@ -8,7 +8,7 @@ parser.tab.c:
 lex.yy.c:
 	flex scanner.l
 
-libast.o:
+ast.o:
 	gcc -c ast.c -o ast.o -Wall
 
 clean:

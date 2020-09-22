@@ -6,6 +6,15 @@
     /* Linha atual do scanner */
     int current_line = 1;
 
+    /**
+     * Atribui o valor lexico a estrutura do token lido
+     * O numero de linha e token ja estao disponiveis em:
+     * - yytext:            Contem o token lido
+     * - get_line_number(): Retorna a linha atual
+     * @param tipo Tipo deste token (ver data_types.h)
+     */
+    void atrib_lexico(int tipo);
+
 %}
 
     /* Expressoes Regulares*/
@@ -98,28 +107,28 @@ caractere_especial ","|";"|":"|"("|")"|"["|"]"|"{"|"}"|"+"|"-"|"|"|"*"|"/"|"<"|"
 "default"   { return TK_PR_DEFAULT; }
 
     /* Caracteres Especiais */
-{caractere_especial} {return yytext[0];}
+{caractere_especial} { atrib_lexico(CARACTERE_ESPECIAL); return yytext[0];}
 
     /* Operadores Compostos */
-"<="        {return TK_OC_LE;}
-">="        {return TK_OC_GE;}
-"=="        {return TK_OC_EQ;}
-"!="        {return TK_OC_NE;}
-"&&"        {return TK_OC_AND;}
-"||"        {return TK_OC_OR;}
-">>"        {return TK_OC_SR;}
-"<<"        {return TK_OC_SL;}
+"<="        { atrib_lexico(TK_OC_LE);  return TK_OC_LE;}
+">="        { atrib_lexico(TK_OC_GE);  return TK_OC_GE;}
+"=="        { atrib_lexico(TK_OC_EQ);  return TK_OC_EQ;}
+"!="        { atrib_lexico(TK_OC_NE);  return TK_OC_NE;}
+"&&"        { atrib_lexico(TK_OC_AND); return TK_OC_AND;}
+"||"        { atrib_lexico(TK_OC_OR);  return TK_OC_OR;}
+">>"        { atrib_lexico(TK_OC_SR);  return TK_OC_SR;}
+"<<"        { atrib_lexico(TK_OC_SL);  return TK_OC_SL;}
 
     /* Literais */
-{literal_char}      {return TK_LIT_CHAR;}
-{literal_string}    {return TK_LIT_STRING;}
-{literal_int}       {return TK_LIT_INT;}
-{literal_float}     {return TK_LIT_FLOAT;}
-"true"              {return TK_LIT_TRUE;}
-"false"             {return TK_LIT_FALSE;}
+{literal_char}      { atrib_lexico(TK_LIT_CHAR);   return TK_LIT_CHAR;}
+{literal_string}    { atrib_lexico(TK_LIT_STRING); return TK_LIT_STRING;}
+{literal_int}       { atrib_lexico(TK_LIT_INT);    return TK_LIT_INT;}
+{literal_float}     { atrib_lexico(TK_LIT_FLOAT);  return TK_LIT_FLOAT;}
+"true"              { atrib_lexico(TK_LIT_TRUE);   return TK_LIT_TRUE;}
+"false"             { atrib_lexico(TK_LIT_FALSE);  return TK_LIT_FALSE;}
 
     /* Identificadores */
-{identificador}    {return TK_IDENTIFICADOR;}
+{identificador}    { atrib_lexico(TK_IDENTIFICADOR); return TK_IDENTIFICADOR;}
 
     /* Ignora o comentario simples e incrementa a linha atual */
 {comentario_simples}    {current_line++;}
@@ -152,4 +161,74 @@ caractere_especial ","|";"|":"|"("|")"|"["|"]"|"{"|"}"|"+"|"-"|"|"|"*"|"/"|"<"|"
 
 int get_line_number(void){
     return current_line;
+}
+
+void atrib_lexico(int tipo)
+{
+    // Preenche a linha na estrutura valor_lexico da variavel global yylval
+    yylval.valor_lexico.linha_ocorrencia = get_line_number();   // Linha de ocorrencia do token
+
+    // Preenche o tipo do token e seu valor na estrutura valor_lexico
+    switch(tipo)
+    {
+        // Caracteres especiais
+        case CARACTERE_ESPECIAL:
+            
+            yylval.valor_lexico.tipo = CARACTERE_ESPECIAL;
+            yylval.valor_lexico.valor.nome = strdup(yytext);
+            break;
+        // Operadores compostos
+        case TK_OC_LE:
+        case TK_OC_GE:
+        case TK_OC_EQ:
+        case TK_OC_NE:
+        case TK_OC_AND:
+        case TK_OC_OR:
+        case TK_OC_SR:
+        case TK_OC_SL:
+            yylval.valor_lexico.tipo = OPERADOR_COMPOSTO;
+            yylval.valor_lexico.valor.nome = strdup(yytext);
+            break;
+        // Literais
+        case TK_LIT_CHAR:
+            yylval.valor_lexico.tipo = LITERAL;
+            // TODO Remover aspas simples do char antes de copiar
+            yylval.valor_lexico.valor.caractere = strdup(yytext);
+            break;
+        case TK_LIT_STRING:
+            yylval.valor_lexico.tipo = LITERAL;
+            // TODO Remover aspas duplas da string antes de copiar
+            yylval.valor_lexico.valor.string = strdup(yytext);
+            break;
+        case TK_LIT_INT:
+            yylval.valor_lexico.tipo = LITERAL;
+            yylval.valor_lexico.valor.inteiro = atoi(yytext);
+            break;
+        case TK_LIT_FLOAT:
+            yylval.valor_lexico.tipo = LITERAL;
+            yylval.valor_lexico.valor.ponto_flutuante = atof(yytext);
+            break;
+        case TK_LIT_TRUE:
+            yylval.valor_lexico.tipo = LITERAL;
+            yylval.valor_lexico.valor.booleano = 1; // 1 para representar o booleano true
+            break;
+        case TK_LIT_FALSE:
+            yylval.valor_lexico.tipo = LITERAL;
+            yylval.valor_lexico.valor.booleano = 0; // 0 para representar o booleano false
+            break;
+        // Identificadores
+        case TK_IDENTIFICADOR:
+            // Atribui o tipo como identificador e copia a cadeia de caracteres em yytext
+            yylval.valor_lexico.tipo = IDENTIFICADOR;
+            yylval.valor_lexico.valor.nome = strdup(yytext);
+            break;
+        // Erro
+        default:
+            break;
+    }
+
+    // TODO Debug
+    //printf("Token lido: \n Tipo: %d\n Valor: %s\n Linha: %d\n", yylval.valor_lexico.tipo, yylval.valor_lexico.valor, yylval.valor_lexico.linha_ocorrencia);
+
+
 }

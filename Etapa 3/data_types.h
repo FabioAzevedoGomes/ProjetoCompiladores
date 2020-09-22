@@ -1,6 +1,6 @@
 
 // Tipos validos para tokens obtidos pelo scanner
-enum tipos_token{CARACTERE_ESPECIAL, OPERADOR, IDENTIFICADOR, LITERAL};
+enum tipos_token{CARACTERE_ESPECIAL, OPERADOR_COMPOSTO, IDENTIFICADOR, LITERAL};
 
 /**
  * Union com os diferentes tipos de valores para os tokens correspondentes 
@@ -12,7 +12,7 @@ union Valores_Token
     int   inteiro;          // Valor de tokens do tipo TK_LIT_INT
     float ponto_flutuante;  // Valor de tokens do tipo TK_LIT_FLOAT
     char* string;           // Valor de tokens do tipo TK_LIT_STRING
-    char  caractere;        // Valor de tokens do tipo TK_LIT_CHAR
+    char* caractere;       // Valor de tokens do tipo TK_LIT_CHAR
     int   booleano;         // Valor de tokens do tipo TK_LIT_BOOL
 };
 
