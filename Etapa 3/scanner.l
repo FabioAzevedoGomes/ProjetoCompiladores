@@ -168,6 +168,9 @@ void atrib_lexico(int tipo)
     // Preenche a linha na estrutura valor_lexico da variavel global yylval
     yylval.valor_lexico.linha_ocorrencia = get_line_number();   // Linha de ocorrencia do token
 
+    // TODO Debug
+    printf("=============\nToken Lido:\n Valor: ");
+
     // Preenche o tipo do token e seu valor na estrutura valor_lexico
     switch(tipo)
     {
@@ -176,6 +179,7 @@ void atrib_lexico(int tipo)
             
             yylval.valor_lexico.tipo = CARACTERE_ESPECIAL;
             yylval.valor_lexico.valor.nome = strdup(yytext);
+            printf("%c\n",*yylval.valor_lexico.valor.nome);
             break;
         // Operadores compostos
         case TK_OC_LE:
@@ -188,39 +192,54 @@ void atrib_lexico(int tipo)
         case TK_OC_SL:
             yylval.valor_lexico.tipo = OPERADOR_COMPOSTO;
             yylval.valor_lexico.valor.nome = strdup(yytext);
+            printf("%s\n",yylval.valor_lexico.valor.nome);
             break;
         // Literais
         case TK_LIT_CHAR:
             yylval.valor_lexico.tipo = LITERAL;
-            // TODO Remover aspas simples do char antes de copiar
-            yylval.valor_lexico.valor.caractere = strdup(yytext);
+            // Remove aspas simples do char antes de copiar
+            yytext[2] = '\0';
+            yylval.valor_lexico.valor.caractere = strdup(yytext + 1);
+            printf("%c\n",*yylval.valor_lexico.valor.caractere);
             break;
         case TK_LIT_STRING:
             yylval.valor_lexico.tipo = LITERAL;
-            // TODO Remover aspas duplas da string antes de copiar
-            yylval.valor_lexico.valor.string = strdup(yytext);
+            
+            // Remove aspas duplas da string antes de copiar
+            char x; int i;
+            for(x = 'a', i = 0; x != '\0'; i++)
+                x = yytext[i];
+            yytext[i-2] = '\0';
+
+            yylval.valor_lexico.valor.string = strdup(yytext + 1);
+            printf("%s\n",yylval.valor_lexico.valor.string);
             break;
         case TK_LIT_INT:
             yylval.valor_lexico.tipo = LITERAL;
             yylval.valor_lexico.valor.inteiro = atoi(yytext);
+            printf("%d\n",yylval.valor_lexico.valor.inteiro);
             break;
         case TK_LIT_FLOAT:
             yylval.valor_lexico.tipo = LITERAL;
             yylval.valor_lexico.valor.ponto_flutuante = atof(yytext);
+            printf("%f\n",yylval.valor_lexico.valor.ponto_flutuante);
             break;
         case TK_LIT_TRUE:
             yylval.valor_lexico.tipo = LITERAL;
             yylval.valor_lexico.valor.booleano = 1; // 1 para representar o booleano true
+            printf("%d\n",yylval.valor_lexico.valor.booleano);
             break;
         case TK_LIT_FALSE:
             yylval.valor_lexico.tipo = LITERAL;
             yylval.valor_lexico.valor.booleano = 0; // 0 para representar o booleano false
+            printf("%d\n",yylval.valor_lexico.valor.booleano);
             break;
         // Identificadores
         case TK_IDENTIFICADOR:
             // Atribui o tipo como identificador e copia a cadeia de caracteres em yytext
             yylval.valor_lexico.tipo = IDENTIFICADOR;
             yylval.valor_lexico.valor.nome = strdup(yytext);
+            printf("%s\n",yylval.valor_lexico.valor.nome);
             break;
         // Erro
         default:
@@ -228,7 +247,7 @@ void atrib_lexico(int tipo)
     }
 
     // TODO Debug
-    //printf("Token lido: \n Tipo: %d\n Valor: %s\n Linha: %d\n", yylval.valor_lexico.tipo, yylval.valor_lexico.valor, yylval.valor_lexico.linha_ocorrencia);
-
+    printf(" Tipo: %d\n", yylval.valor_lexico.tipo);
+    printf(" Linha: %d\n", yylval.valor_lexico.linha_ocorrencia);
 
 }
