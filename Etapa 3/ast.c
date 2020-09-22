@@ -19,52 +19,46 @@ extern void libera(void *arvore)
     remove_no(arvore);
 }
 
-extern void insere_pai(void **arvore, valor_lexico_t *valor_lexico)
+extern node_t *insere_no_filho(node_t **nodo_pai, node_t *nodo_filho)
 {
-    // Cria um nodo novo e inicializa com os valores
-    node_t *nodo = (node_t *)malloc(sizeof(node_t));
-    nodo->valor_lexico = valor_lexico;
-    nodo->filhos = *(node_t **)arvore;
-    nodo->irmao = NULL;
-
-    *(node_t **)arvore = nodo;
-}
-
-extern void insere_filho(void **arvore, valor_lexico_t *valor_lexico)
-{
-    // Cria um nodo novo e inicializa com os valores
-    node_t *nodo = (node_t *)malloc(sizeof(node_t));
-    nodo->valor_lexico = valor_lexico;
-    nodo->filhos = NULL;
-    nodo->irmao = NULL;
-
-    // Se a arvore ja existe, cria o nodo como filho
-    if (*arvore != NULL)
+    // Verifica se o nodo pai existe:
+    if (*nodo_pai != NULL)
     {
+        // Inicializa o ponteiro auxiliar com o filho do nodo pai
+        node_t *aux = (*nodo_pai)->filhos;
 
-        // Insere nos filhos do nodo recebido
-        if ((*(node_t **)arvore)->filhos != NULL)
-        {
-            // Ponteiro auxiliar
-            node_t *aux = (*(node_t **)arvore)->filhos;
+        // Itera pelos nodos filhos ate chegar no ultimo
+        while (aux->irmao != NULL)
+            aux = aux->irmao;
 
-            // Percorre filhos ate chegar no ultimo
-            while (aux->irmao != NULL)
-                aux = aux->irmao;
+        // Quando chega no ultimo, insere o novo filho
+        aux->irmao = nodo_filho;
 
-            // Insere na arvore
-            aux->irmao = nodo;
-        }
-        else
-        {
-            // Se nao possui filhos, insere novo nodo apenas
-            (*(node_t **)arvore)->filhos = nodo;
-        }
+        // Retorna o nodo pai (Redundante)
+        return *(nodo_pai);
     }
     else
     {
-        // Se a arvore nao existe, utiliza o nodo como raiz
-        *(node_t **)arvore = nodo;
+        // Se o nodo pai nao existe, o filho e o novo pai
+        return nodo_filho;
+    }
+}
+
+extern node_t *insere_no_comando(node_t **nodo_primeiro, node_t *nodo_segundo)
+{
+    // Verifica se o nodo primario existe:
+    if (*nodo_primeiro != NULL)
+    {
+        // Inicializa o ponteiro auxiliar com o filho do nodo pai
+        (*nodo_primeiro)->prox_comando = nodo_segundo;
+
+        // Retorna o nodo primario
+        return *nodo_primeiro;
+    }
+    else
+    {
+        // Se o nodo primario nao existe, o filho e o novo pai
+        return nodo_segundo;
     }
 }
 
@@ -107,31 +101,33 @@ extern void remove_no(void *arvore)
             }
         }
 
+        // Se este nodo tem comandos subsequentes, tambem remove
+        if (((node_t *)arvore)->prox_comando != NULL)
+            remove_no(((node_t *)arvore)->prox_comando);
+
         // Salva o primeiro irmao desta arvore
         aux_1 = ((node_t *)arvore)->irmao;
 
         // Libera a cadeia de caracteres criada por strdup no scanner.l, caso haja uma
-        switch(((node_t *)arvore)->valor_lexico->tipo)
+        switch (((node_t *)arvore)->valor_lexico->tipo)
         {
-        // Literais string
-        case TK_LIT_STRING:
-            free(((node_t*)arvore)->valor_lexico->valor.string);
-            break;
-        // Identificadores
-        case TK_IDENTIFICADOR:
-        // Operadores compostos
-        case TK_OC_LE:
-        case TK_OC_GE:
-        case TK_OC_EQ:
-        case TK_OC_NE:
-        case TK_OC_AND:
-        case TK_OC_OR:
-        case TK_OC_SR:
-        case TK_OC_SL:
-            free(((node_t*)arvore)->valor_lexico->valor.nome);
-            break;
-        default:    // Nos demais nao faz nada
-            break;
+            // Literais string
+            case TK_LIT_STRING:
+                free(((node_t *)arvore)->valor_lexico->valor.string);
+                break;
+            case TK_IDENTIFICADOR:
+            case TK_OC_LE:
+            case TK_OC_GE:
+            case TK_OC_EQ:
+            case TK_OC_NE:
+            case TK_OC_AND:
+            case TK_OC_OR:
+            case TK_OC_SR:
+            case TK_OC_SL:
+                free(((node_t *)arvore)->valor_lexico->valor.nome);
+                break;
+            default: // Nos demais nao faz nada
+                break;
         }
 
         // Remove a estrutura de valor lexico deste nodo
@@ -155,6 +151,9 @@ void imprime_nos_arvore(void *arvore)
 
         // Imprime os irmaos do nodo atual
         imprime_nos_arvore(((node_t *)arvore)->irmao);
+
+        // Imprime o comando subsequente do nodo atual
+        imprime_nos_arvore(((node_t *)arvore)->prox_comando);
     }
 }
 
@@ -171,6 +170,9 @@ void imprime_arestas_arvore(void *arvore)
 
         // Imprime as arestas dos irmaos
         imprime_arestas_arvore(((node_t *)arvore)->irmao);
+
+        // Imprime as arestas dos comandos seguintes
+        imprime_arestas_arvore(((node_t *)arvore)->prox_comando);
     }
 }
 
@@ -242,5 +244,21 @@ void imprime_aresta(void *arvore)
             // Passa para o proximo filho
             aux = aux->irmao;
         }
+
+        // Printa o proximo comando do nodo, se ele existe
+        if (((node_t *)arvore)->prox_comando != NULL)
+            printf("%p, %p", (node_t *)arvore, ((node_t *)arvore)->prox_comando);
     }
+}
+
+node_t *cria_nodo(valor_lexico_t *valor_lexico)
+{
+    // Cria um nodo novo e inicializa com os valores informados
+    node_t *nodo = (node_t *)malloc(sizeof(node_t));
+    nodo->valor_lexico = valor_lexico;
+    nodo->filhos = NULL;
+    nodo->irmao = NULL;
+
+    // Retorna o ponteiro para este nodo
+    return nodo;
 }

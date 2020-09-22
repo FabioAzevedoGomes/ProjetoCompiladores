@@ -30,6 +30,6 @@ typedef struct node
 {
     valor_lexico_t*     valor_lexico; // Informacoes deste nodo
     struct node*        filhos;       // Ponteiro para o primeiro filho deste nodo
-    struct node*        irmao;        // Ponteiro para o proximo irmao deste nodo (next)
-
+    struct node*        irmao;        // Ponteiro para o proximo irmao deste nodo
+    struct node*        prox_comando; // Ponteiro para o proximo comando apos este nodo
 }node_t;

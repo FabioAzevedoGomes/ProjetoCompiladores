@@ -11,6 +11,7 @@
     /* Funcao de tratamento de erro */
     int yyerror (char const *s);
 
+    /* Referencia para a AST sendo montada */
     void *ast;
 %}
 
@@ -74,14 +75,14 @@
 %start programa
 
 // Tipos dos nao terminais
-%type <nodo> operador_unario
+%type <nodo> var_global declaracao_funcao programa operador_unario literal
 
 %%
 
 // Um programa pode ser:
-programa:   /* empty */                    // Vazio
-          | declaracao_funcao programa  {} // Uma declaracao de funcao, seguida de mais programa
-          | var_global programa         {} // Uma definicao de variavel global, seguida de mais programa
+programa:   /* empty */                 {ast = $$;}   // Vazio
+          | declaracao_funcao programa  {$$ = insere_no_comando(&$1, $2);} // Uma declaracao de funcao, seguida de mais programa
+          | var_global programa         {$$ = insere_no_comando(&$1, $2);} // Uma definicao de variavel global, seguida de mais programa
 ;
 
 
@@ -97,12 +98,12 @@ tipo:   TK_PR_INT       {} // A palavra int
 ; 
 
 // Um literal valido pode ser:
-literal:   TK_LIT_INT       {} // Um literal aritmetico
-         | TK_LIT_FLOAT     {} // Um literal logico
-         | TK_LIT_TRUE      {} // Um literal boolean true
-         | TK_LIT_FALSE     {} // Um literal boolean false
-         | TK_LIT_CHAR      {} // Um literal char
-         | TK_LIT_STRING    {} // Um literal string
+literal:   TK_LIT_INT       {$$ = cria_nodo(&yylval.valor_lexico);} // Um literal aritmetico
+         | TK_LIT_FLOAT     {$$ = cria_nodo(&yylval.valor_lexico);} // Um literal logico
+         | TK_LIT_TRUE      {$$ = cria_nodo(&yylval.valor_lexico);} // Um literal boolean true
+         | TK_LIT_FALSE     {$$ = cria_nodo(&yylval.valor_lexico);} // Um literal boolean false
+         | TK_LIT_CHAR      {$$ = cria_nodo(&yylval.valor_lexico);} // Um literal char
+         | TK_LIT_STRING    {$$ = cria_nodo(&yylval.valor_lexico);} // Um literal string
 ;
 
 // Um tipo estatico valido pode ser:
@@ -398,13 +399,13 @@ operador_binario_alta_prec:   '*' {} // O operador de multiplicacao
 ;
 
 // Um operador unario pode ser:
-operador_unario:   '+' {} // O operador de positividade explicita
-                 | '-' {} // O operador de inversao de sinal
-                 | '!' {} // O operador de negacao
-                 | '&' {} // O operador de acesso a endereco
-                 | '*' {} // O operador de resolucao de ponteiros
-                 | '?' {} // O operador de avaliacao de expressao
-                 | '#' {} // O operador de acesso a tabela hash
+operador_unario:   '+' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de positividade explicita
+                 | '-' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de inversao de sinal
+                 | '!' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de negacao
+                 | '&' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de acesso a endereco
+                 | '*' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de resolucao de ponteiros
+                 | '?' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de avaliacao de expressao
+                 | '#' {$$ = cria_nodo(&yylval.valor_lexico);} // O operador de acesso a tabela hash
 ;
 
 %%
