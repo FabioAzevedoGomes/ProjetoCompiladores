@@ -19,49 +19,6 @@ extern void libera(void *arvore)
     remove_no(arvore);
 }
 
-extern node_t *insere_no_filho(node_t **nodo_pai, node_t *nodo_filho)
-{
-    // Verifica se o nodo pai existe:
-    if (*nodo_pai != NULL)
-    {
-        // Inicializa o ponteiro auxiliar com o filho do nodo pai
-        node_t *aux = (*nodo_pai)->filhos;
-
-        // Itera pelos nodos filhos ate chegar no ultimo
-        while (aux->irmao != NULL)
-            aux = aux->irmao;
-
-        // Quando chega no ultimo, insere o novo filho
-        aux->irmao = nodo_filho;
-
-        // Retorna o nodo pai (Redundante)
-        return *(nodo_pai);
-    }
-    else
-    {
-        // Se o nodo pai nao existe, o filho e o novo pai
-        return nodo_filho;
-    }
-}
-
-extern node_t *insere_no_comando(node_t **nodo_primeiro, node_t *nodo_segundo)
-{
-    // Verifica se o nodo primario existe:
-    if (*nodo_primeiro != NULL)
-    {
-        // Inicializa o ponteiro auxiliar com o filho do nodo pai
-        (*nodo_primeiro)->prox_comando = nodo_segundo;
-
-        // Retorna o nodo primario
-        return *nodo_primeiro;
-    }
-    else
-    {
-        // Se o nodo primario nao existe, o filho e o novo pai
-        return nodo_segundo;
-    }
-}
-
 extern void remove_no(void *arvore)
 {
     // Ponteiros auxiliares
@@ -111,23 +68,20 @@ extern void remove_no(void *arvore)
         // Libera a cadeia de caracteres criada por strdup no scanner.l, caso haja uma
         switch (((node_t *)arvore)->valor_lexico->tipo)
         {
-            // Literais string
-            case TK_LIT_STRING:
+        // Caracteres especiais, operadores compostos e identificadores
+        case CARACTERE_ESPECIAL:
+        case OPERADOR_COMPOSTO:
+        case IDENTIFICADOR:
+            // Libera o nome
+            free(((node_t *)arvore)->valor_lexico->valor.nome);
+            break;
+        case LITERAL:
+            // Se for string, libera a string
+            if (((node_t *)arvore)->tipo == LIT_STRING)
                 free(((node_t *)arvore)->valor_lexico->valor.string);
-                break;
-            case TK_IDENTIFICADOR:
-            case TK_OC_LE:
-            case TK_OC_GE:
-            case TK_OC_EQ:
-            case TK_OC_NE:
-            case TK_OC_AND:
-            case TK_OC_OR:
-            case TK_OC_SR:
-            case TK_OC_SL:
-                free(((node_t *)arvore)->valor_lexico->valor.nome);
-                break;
-            default: // Nos demais nao faz nada
-                break;
+            break;
+        default: // Nos demais nao faz nada
+            break;
         }
 
         // Remove a estrutura de valor lexico deste nodo
@@ -187,38 +141,64 @@ void imprime_no(void *arvore)
         switch (((node_t *)arvore)->valor_lexico->tipo)
         {
         // Literais
-        case TK_LIT_CHAR:
-            printf("%c", ((node_t *)arvore)->valor_lexico->valor.caractere);
-            break;
-        case TK_LIT_STRING:
-            printf("%s", ((node_t *)arvore)->valor_lexico->valor.string);
-            break;
-        case TK_LIT_INT:
-            printf("%d", ((node_t *)arvore)->valor_lexico->valor.inteiro);
-            break;
-        case TK_LIT_FLOAT:
-            printf("%f", ((node_t *)arvore)->valor_lexico->valor.ponto_flutuante);
-            break;
-        case TK_LIT_TRUE:
-            printf("%d", ((node_t *)arvore)->valor_lexico->valor.booleano);
-            break;
-        case TK_LIT_FALSE:
-            printf("%d", ((node_t *)arvore)->valor_lexico->valor.booleano);
+        case LITERAL:
+            switch (((node_t *)arvore)->tipo)
+            {
+            case TK_LIT_CHAR:
+                printf("%c", ((node_t *)arvore)->valor_lexico->valor.caractere);
+                break;
+            case LIT_STRING:
+                printf("%s", ((node_t *)arvore)->valor_lexico->valor.string);
+                break;
+            case LIT_INT:
+                printf("%d", ((node_t *)arvore)->valor_lexico->valor.inteiro);
+                break;
+            case LIT_FLOAT:
+                printf("%f", ((node_t *)arvore)->valor_lexico->valor.ponto_flutuante);
+                break;
+            case LIT_BOOL:
+                printf("%d", ((node_t *)arvore)->valor_lexico->valor.booleano);
+                break;
+            }
             break;
         // Identificadores
-        case TK_IDENTIFICADOR:
+        case IDENTIFICADOR:
+            printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome);
+            break;
         // Operadores compostos
-        case TK_OC_LE:
-        case TK_OC_GE:
-        case TK_OC_EQ:
-        case TK_OC_NE:
-        case TK_OC_AND:
-        case TK_OC_OR:
-        case TK_OC_SR:
-        case TK_OC_SL:
+        case OPERADOR_COMPOSTO:
+            printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome);
+            break;
         // Caracteres especiais
+        case CARACTERE_ESPECIAL:
+            switch (((node_t *)arvore)->tipo)
+            {
+            case FUNC_LIST:          // Para declaracao de funcao, usa o nome da mesma
+            case UNOP:               // Para operadores unarios, usa o proprio operador
+            case BINOP:              // Para operadores binarios, usa o proprio operador
+            case CMD_SHIFT:          // Para comando de shift, usa o label << ou >>
+            case CMD_BREAK_CONTINUE: // Para comando de break/continue, usa o label 'break' ou 'continue'
+            case CMD_RETURN:         // Para comando de return, usa o label 'return'
+            case CMD_FOR:            // Para comando de for, usa o label 'for'
+            case CMD_IF:             // Para comando de if, usa o label 'if'
+            case CMD_WHILE:          // Para comando de while, usa o label 'while'
+            case VAR_INIT:           // Para inicializacao de variavel, usa o label <=
+            case VAR_ATRIB:          // Para atribuicao de variavel, usa o label =
+                printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome);
+                break;
+            case VEC_IND: // Para indexacao do vetor, usa o label []
+                printf("[]");
+                break;
+            case FUNC_CALL: // Para chamada de funcao, usa o label call + nome da funcao
+                printf("call %s", ((node_t *)arvore)->valor_lexico->valor.nome);
+                break;
+            case TERNOP: // Para o operador ternario, usa o label '?:'
+                printf("?:");
+                break;
+            }
+            break;
+        // Erro
         default:
-            printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome); // TODO Printar os valores especificados na definicao
             break;
         }
 
@@ -251,14 +231,105 @@ void imprime_aresta(void *arvore)
     }
 }
 
-node_t *cria_nodo(valor_lexico_t *valor_lexico)
+node_t *insere_no_filho(node_t **nodo_pai, node_t *nodo_filho)
+{
+    // Verifica se o nodo pai existe:
+    if (*nodo_pai != NULL)
+    {
+        // Inicializa o ponteiro auxiliar com o filho do nodo pai
+        node_t *aux = (*nodo_pai)->filhos;
+
+        // Itera pelos nodos filhos ate chegar no ultimo
+        while (aux->irmao != NULL)
+            aux = aux->irmao;
+
+        // Quando chega no ultimo, insere o novo filho
+        aux->irmao = nodo_filho;
+
+        // Retorna o nodo pai (Redundante)
+        return *(nodo_pai);
+    }
+    else
+    {
+        // Se o nodo pai nao existe, o filho e o novo pai
+        return nodo_filho;
+    }
+}
+
+extern node_t *insere_no_comando(node_t **nodo_primeiro, node_t *nodo_segundo)
+{
+    // Verifica se o nodo primario existe:
+    if (*nodo_primeiro != NULL)
+    {
+        // Inicializa o ponteiro auxiliar com o filho do nodo pai
+        (*nodo_primeiro)->prox_comando = nodo_segundo;
+
+        // Retorna o nodo primario
+        return *nodo_primeiro;
+    }
+    else
+    {
+        // Se o nodo primario nao existe, o filho e o novo pai
+        return nodo_segundo;
+    }
+}
+
+node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo_nodo)
 {
     // Cria um nodo novo e inicializa com os valores informados
     node_t *nodo = (node_t *)malloc(sizeof(node_t));
     nodo->valor_lexico = valor_lexico;
+    nodo->tipo = tipo_nodo;
     nodo->filhos = NULL;
     nodo->irmao = NULL;
 
     // Retorna o ponteiro para este nodo
     return nodo;
+}
+
+node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *valor, int linha)
+{
+    // Aloca a estrutura para o valor lexico
+    valor_lexico_t *valor_lexico = (valor_lexico_t *)malloc(sizeof(valor_lexico_t));
+    valor_lexico->linha_ocorrencia = linha;
+    valor_lexico->valor.nome = strdup(valor);
+    valor_lexico->tipo = tipo_token;
+
+    // Cria um nodo com esta estrutura e retorna
+    return cria_nodo_lexico(valor_lexico, tipo_nodo);
+}
+
+node_t *preenche_nodo(node_t **nodo_pai, node_t **filho_1, node_t **filho_2, node_t **filho_3, node_t **filho_4)
+{
+    // Se o nodo pai e o primeiro filho existirem
+    if (*nodo_pai != NULL && filho_1 != NULL && *filho_1 != NULL)
+    {
+        // Insere o filho 1
+        *nodo_pai = insere_no_filho(nodo_pai, *filho_1);
+
+        // Se o filho 2 existir
+        if (filho_2 != NULL && *filho_2 != NULL)
+        {
+            // Insere o filho 2
+            *nodo_pai = insere_no_filho(nodo_pai, *filho_2);
+
+            // Se o filho 3 existir
+            if (filho_3 != NULL && *filho_3 != NULL)
+            {
+                // Insere o filho 3
+                *nodo_pai = insere_no_filho(nodo_pai, *filho_3);
+
+                // Se o filho 4 existir
+                if (filho_4 != NULL && *filho_4 != NULL)
+                {
+                    // Insere o filho 4
+                    *nodo_pai = insere_no_filho(nodo_pai, *filho_4);
+                }
+            }
+        }
+        // Retorna o nodo pai
+        return *nodo_pai;
+    }
+
+    return NULL;
 }

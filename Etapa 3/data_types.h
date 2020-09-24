@@ -12,16 +12,25 @@ union Valores_Token
     int   booleano;         // Valor de tokens do tipo TK_LIT_BOOL
 };
 
+// Os 4 tipos validos para tokens definidos na especificacao da E3 mais um tipo para erros (Em teoria nunca usado)
+typedef enum Tipos_Token {CARACTERE_ESPECIAL, OPERADOR_COMPOSTO, IDENTIFICADOR, LITERAL, ERRO} Tipos_Token;
+
 /**
  * Struct que representa o valor lexico de um token
  */
 typedef struct valor_lexico
 {
     int                 linha_ocorrencia;   // Linha onde este token ocorreu
-    int                 tipo;               // Tipo deste token
+    Tipos_Token         tipo;               // Tipo deste token
     union Valores_Token valor;              // Valor deste token
 
 }valor_lexico_t;
+
+
+// Os tipos possiveis de nodo da arvore
+typedef enum Tipos_Nodo{FUNC_LIST, CMD_LIST , EXP_LIST, VAR_INIT, VAR_ATRIB, CMD_ES,
+    FUNC_CALL, CMD_SHIFT, CMD_BREAK_CONTINUE, CMD_RETURN, CMD_IF, CMD_FOR, CMD_WHILE,
+    UNOP, BINOP, TERNOP, VEC_IND, LIT_INT, LIT_FLOAT, LIT_STRING, LIT_CHAR, LIT_BOOL, ID} Tipos_Nodos;
 
 /**
  * Nodo da arvore de sintaxe abstrata que sera gerada 
@@ -29,7 +38,9 @@ typedef struct valor_lexico
 typedef struct node
 {
     valor_lexico_t*     valor_lexico; // Informacoes deste nodo
+    int                 tipo;         // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
     struct node*        filhos;       // Ponteiro para o primeiro filho deste nodo
     struct node*        irmao;        // Ponteiro para o proximo irmao deste nodo
     struct node*        prox_comando; // Ponteiro para o proximo comando apos este nodo
+
 }node_t;
