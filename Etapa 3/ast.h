@@ -88,7 +88,7 @@ node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo_nodo);
  * Equivale a criar um nodo 'artificial' para as PRs e operadores
  * @param tipo Tipo deste token, de acordo com os tipos estendidos do arquivo data_types.h
  * @param valor Valor deste token
- * @param linha Linha onde ocorreu este token
+ * @param linha Linha onde ocorreu este token (pode ser -1 para indicar nodo artificial onde esta info nao e coletada, como for/if)
  * @returns Ponteiro para a struct do nodo deste token
  */
 node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *valor, int linha);
@@ -97,10 +97,10 @@ node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *
  * Preenche o nodo informado com os filhos providos
  * Aceita, no maximo, 4 filhos por chamada, que e o numero de filhos do comando 'for' 
  * @param nodo_pai Ponteiro para ponteiro do nodo principal, o qual ira receber os filhos
- * @param filho_1  Ponteiro para um ponteiro para o primeiro filho
- * @param filho_2  Ponteiro para um ponteiro para o segundo filho (pode ser NULL)
- * @param filho_3  Ponteiro para um ponteiro para o terceiro filho (pode ser NULL)
- * @param filho_4  Ponteiro para um ponteiro para o quarto filho (pode ser NULL)
+ * @param filho_1  Ponteiro para o primeiro filho
+ * @param filho_2  Ponteiro para o segundo filho (pode ser NULL)
+ * @param filho_3  Ponteiro para o terceiro filho (pode ser NULL)
+ * @param filho_4  Ponteiro para o quarto filho (pode ser NULL)
  * @returns        Ponteiro para o nodo pai
  */
-node_t *preenche_nodo(node_t **nodo_pai, node_t **filho_1, node_t **filho_2, node_t **filho_3, node_t **filho_4);
+node_t *preenche_nodo(node_t **nodo_pai, node_t *filho_1, node_t *filho_2, node_t *filho_3, node_t *filho_4);

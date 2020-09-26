@@ -18,7 +18,7 @@
 /* Union que representa o valor lexico do token*/
 %union{
     node_t* nodo;                 // Nodo do token
-    valor_lexico_t valor_lexico; // Valor lexico do token 
+    valor_lexico_t* valor_lexico; // Valor lexico do token 
 }
 
 /* Define o relatorio de erro como verboso */
@@ -74,13 +74,41 @@
 // Simbolo inicial
 %start programa
 
-// Tipos dos nao terminais
-%type <nodo> bloco_comandos lista_comandos_simples comando_es comando_simples var_local argumento lista_identificadores_locais identificador_local operador_atrib atribuicao operador_shift comando_shift vetor_indexado comando_if comando_for comando_while controle_fluxo termo expressao operador_logico comparador_relacional operador_binario_alta_prec operador_binario_baixa_prec chamada_funcao operando fator var_global declaracao_funcao programa operador_unario literal
+// Tipos dos nao terminais (Acredito que sejam todos do tipo nodo_t?)
+%type <nodo> bloco_comandos 
+lista_comandos_simples 
+comando_es 
+comando_simples 
+var_local argumento 
+lista_identificadores_locais 
+identificador_local 
+atribuicao 
+operador_shift 
+comando_shift 
+vetor_indexado 
+comando_if 
+comando_for 
+comando_while 
+controle_fluxo 
+termo 
+expressao 
+operador_logico 
+comparador_relacional 
+operador_binario_alta_prec 
+operador_binario_baixa_prec 
+chamada_funcao 
+operando 
+fator 
+var_global 
+declaracao_funcao 
+programa 
+operador_unario 
+literal
 
 %%
 
 // Um programa pode ser:
-programa:   /* empty */                 {}   // Vazio
+programa:   /* empty */                 {} // Vazio
           | declaracao_funcao programa  {} // Uma declaracao de funcao, seguida de mais programa
           | var_global programa         {} // Uma definicao de variavel global, seguida de mais programa
 ;
@@ -98,7 +126,7 @@ tipo:   TK_PR_INT       {} // A palavra int
 ; 
 
 // Um literal valido pode ser:
-literal:   TK_LIT_INT       {} // Um literal aritmetico
+literal:   TK_LIT_INT       {$$ = cria_nodo_lexico($1, LIT_INT);} // Um literal aritmetico
          | TK_LIT_FLOAT     {} // Um literal logico
          | TK_LIT_TRUE      {} // Um literal boolean true
          | TK_LIT_FALSE     {} // Um literal boolean false
@@ -120,7 +148,7 @@ tipo_const:   TK_PR_CONST tipo  {} // A palavra const, seguida de um tipo
 tipo_const_estatico:   tipo                          {} // Apenas um tipo
                      | TK_PR_STATIC tipo             {} // A palavra static seguida de um tipo
                      | TK_PR_CONST tipo              {} // A palavra const seguida de um tipo
-                     | TK_PR_CONST TK_PR_STATIC tipo {} // A palavra const e static, seguidas de um tipo
+                     | TK_PR_STATIC TK_PR_CONST tipo {} // A palavra const e static, seguidas de um tipo
 ;
 
 
@@ -260,8 +288,8 @@ var_local:   tipo_const_estatico lista_identificadores_locais {} ;
  *  OU
  * Um identificador local, seguido de uma lista de identificadores locais, separados por virgula
  */
-lista_identificadores_locais:   identificador_local                                  {}
-                              | identificador_local ',' lista_identificadores_locais {}
+lista_identificadores_locais:   identificador_local                                  {$$ = $1;}
+                              | identificador_local ',' lista_identificadores_locais {$$ = $1;}
 ;
 
 /**
@@ -273,28 +301,25 @@ lista_identificadores_locais:   identificador_local                             
  *  OU
  * Um identificador simples inicializado com outro identificador simples
  */
-identificador_local:   TK_IDENTIFICADOR                           {} 
-                     | TK_IDENTIFICADOR TK_OC_LE literal          {} 
-                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {} 
+identificador_local:   TK_IDENTIFICADOR                           { /* Nao considera os identificadores nao inicializados */} 
+                     | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = cria_nodo_lexico($2, VAR_INIT); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} 
+                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = cria_nodo_lexico($2, VAR_INIT); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), cria_nodo_lexico($1, ID), NULL, NULL);} 
 ;
 
-// Um operador de atribuicao e:
-operador_atrib: '=' {}; // Separando para legibilidade
-
 // Uma atribuicao pode ser:
-atribuicao:   TK_IDENTIFICADOR operador_atrib expressao {} // Uma atribuicao a um identificador simples
-            | vetor_indexado operador_atrib expressao   {} // Uma atribuicao a um vetor indexado por uma expressao
+atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = cria_nodo_intermed(COMANDO, VAR_ATRIB, "=", -1); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} // Uma atribuicao a um identificador simples   // TODO Esse -1?
+            | vetor_indexado '=' expressao   {$$ = cria_nodo_intermed(COMANDO, VAR_ATRIB, "=", -1); $$ = preenche_nodo(&$$, $1, $3, NULL, NULL);} // Uma atribuicao a um vetor indexado por uma expressao // TODO Esse -1? // TODO Verificar memleak nos char especiais
 ;
 
 // Um comando de entrada ou saida pode ser:
-comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {} // A palavra input, seguida de um identificador
-            | TK_PR_OUTPUT TK_IDENTIFICADOR {} // A palavra output, seguida de um identificador
-            | TK_PR_OUTPUT literal          {} // A palavra output, seguida de um literal
+comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = cria_nodo_intermed(COMANDO, CMD_ES,  "input", -1); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra input, seguida de um identificador // TODO Esse -1?
+            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = cria_nodo_intermed(COMANDO, CMD_ES, "output", -1); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra output, seguida de um identificador // TODO Esse -1?
+            | TK_PR_OUTPUT literal          {$$ = cria_nodo_intermed(COMANDO, CMD_ES, "output", -1); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // A palavra output, seguida de um literal // TODO Esse -1?
 ;
 
 // Um operador de shift pode ser:
-operador_shift:   TK_OC_SL {} // O operador de shift left (<<) 
-                | TK_OC_SR {} // O operador de shift right (>>) 
+operador_shift:   TK_OC_SL {$$ = cria_nodo_lexico($1, CMD_SHIFT);} // O operador de shift left (<<) 
+                | TK_OC_SR {$$ = cria_nodo_lexico($1, CMD_SHIFT);} // O operador de shift right (>>) 
 ;
 
 /**
@@ -304,8 +329,8 @@ operador_shift:   TK_OC_SL {} // O operador de shift left (<<)
 *  OU
 * Um vetor indexado por uma expressao, seguido de um operador de shift e um literal inteiro positivo
 */
-comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {}
-               | vetor_indexado operador_shift TK_LIT_INT   {}
+comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {$$ = preenche_nodo(&$2, cria_nodo_lexico($1, ID), cria_nodo_lexico($3, LIT_INT), NULL, NULL);}
+               | vetor_indexado operador_shift TK_LIT_INT   {$$ = preenche_nodo(&$2, $1, cria_nodo_lexico($3, LIT_INT), NULL, NULL);}
 ;
 
 
@@ -313,9 +338,9 @@ comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {}
 
 
 // Um comando de controle de fluxo pode ser:
-controle_fluxo:   comando_if    {} // Um comando if
-                | comando_for   {} // Um comando for
-                | comando_while {} // Um comando while
+controle_fluxo:   comando_if    {$$ = $1;} // Um comando if
+                | comando_for   {$$ = $1;} // Um comando for
+                | comando_while {$$ = $1;} // Um comando while
 ;
 
 /**
@@ -326,8 +351,8 @@ controle_fluxo:   comando_if    {} // Um comando if
  * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos...
  * ... terminado com a palavra else, seguida de um bloco de comandos
  */
-comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {} 
-            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {} 
+comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_IF, "if", -1); $$ = preenche_nodo(&$$, $3, $5, NULL, NULL);} // TODO Esse -1? 
+            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_IF, "if", -1); $$ = preenche_nodo(&$$, $3, $5, $7, NULL);} // TODO Esste -1?
 ;
 
 /**
@@ -337,7 +362,8 @@ comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {}
  * ... uma atribuicao, expressao e atribuicao, nessa ordem, separados por dois pontos (:)
  * ... terminado por um bloco de comandos
  */
-comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos {} ;
+comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_FOR, "for", -1); // TODO Esse -1?
+                                                                                       $$ = preenche_nodo(&$$, $3, $5, $7, $9);};
 
 /**
  * Um comando while pode ser:
@@ -345,77 +371,78 @@ comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_com
  * A palavra while, seguida de uma expressao entre parenteses...
  * ... terminado pela palavra do, seguida de um bloco de comandos
  */
-comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {} ;
+comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_WHILE, "while", -1); // TODO Esse -1? 
+                                                                      $$ = preenche_nodo(&$$, $3, $6, NULL, NULL);} ;
 
 
 // EXPRESSOES
 
 
 // Uma expressao pode ser:
-expressao:   expressao operador_binario_baixa_prec termo {} // Uma expressao associada a um termo, atraves de um operador de baixa precedencia
-           | termo                                       {} // Apenas um termo
+expressao:   expressao operador_binario_baixa_prec termo {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Uma expressao associada a um termo, atraves de um operador de baixa precedencia
+           | termo                                       {$$ = $1;} // Apenas um termo
 ;
 
 // Um termo pode ser:
-termo:   termo operador_binario_alta_prec fator {} // Um termo associado a um fator, atraves de um operador de alta precedencia
-       | fator                                  {} // Apenas um fator
+termo:   termo operador_binario_alta_prec fator {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Um termo associado a um fator, atraves de um operador de alta precedencia
+       | fator                                  {$$ = $1;} // Apenas um fator
 ;
 
 // Um fator pode ser:
-fator:   '(' expressao ')' {} // Uma expressao entre parenteses
-       | operando          {} // Um operando valido da linguagem
+fator:   '(' expressao ')' {$$ = $2;} // Uma expressao entre parenteses
+       | operando          {$$ = $1;} // Um operando valido da linguagem
 ;
 
 // Um operando pode ser:
-operando:   TK_IDENTIFICADOR                   {$$ = cria_nodo_lexico(&$1, ID);} // Um identificador
+operando:   TK_IDENTIFICADOR                   {$$ = cria_nodo_lexico($1, ID);} // Um identificador
           | vetor_indexado                     {$$ = $1;} // Um vetor indexado por uma expressao
-          | TK_LIT_INT                         {$$ = cria_nodo_lexico(&$1, LIT_INT);} // Um literal inteiro
-          | TK_LIT_FLOAT                       {$$ = cria_nodo_lexico(&$1, LIT_FLOAT);} // Um literal float
+          | TK_LIT_INT                         {$$ = cria_nodo_lexico($1, LIT_INT);} // Um literal inteiro
+          | TK_LIT_FLOAT                       {$$ = cria_nodo_lexico($1, LIT_FLOAT);} // Um literal float
           | chamada_funcao                     {$$ = $1;}// Uma chamada de funcao
-          | TK_LIT_TRUE                        {$$ = cria_nodo_lexico(&$1, LIT_BOOL);} // Um literal TRUE
-          | TK_LIT_FALSE                       {$$ = cria_nodo_lexico(&$1, LIT_BOOL);} // Um literal FALSE
-          | operador_unario fator              {$$ = preenche_nodo(&$1, &$2, NULL, NULL, NULL);} // Um operador unario aplicado a um fator
-;
+          | TK_LIT_TRUE                        {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal TRUE
+          | TK_LIT_FALSE                       {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal FALSE
+          | operador_unario fator              {$$ = preenche_nodo(&$1, $2, NULL, NULL, NULL);} // Um operador unario aplicado a um fator
+; 
 
 // Um comparador relacional pode ser:
-comparador_relacional:   TK_OC_GE {$$ = cria_nodo_lexico(&$1, BINOP);} // O comparador de maior ou igual (>=)
-                       | TK_OC_LE {$$ = cria_nodo_lexico(&$1, BINOP);} // O comparador de menor ou igual (<=)
-                       | TK_OC_EQ {$$ = cria_nodo_lexico(&$1, BINOP);} // O comparador de igualdade (==)
-                       | TK_OC_NE {$$ = cria_nodo_lexico(&$1, BINOP);} // O comparador de diferenca (!=)
-                       | '<'      {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O comparador de menor
-                       | '>'      {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O comparador de maior
+comparador_relacional:   TK_OC_GE {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de maior ou igual (>=)
+                       | TK_OC_LE {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de menor ou igual (<=)
+                       | TK_OC_EQ {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de igualdade (==)
+                       | TK_OC_NE {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de diferenca (!=)
+                       | '<'      {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O comparador de menor
+                       | '>'      {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O comparador de maior
 ;
 
 // Um operador logico pode ser:
-operador_logico:   TK_OC_AND {$$ = cria_nodo_lexico(&$1, BINOP);} // O operdor AND (&&)
-                 | TK_OC_OR  {$$ = cria_nodo_lexico(&$1, BINOP);} // O operador OR (||)
+operador_logico:   TK_OC_AND {$$ = cria_nodo_lexico($1, BINOP);} // O operdor AND (&&)
+                 | TK_OC_OR  {$$ = cria_nodo_lexico($1, BINOP);} // O operador OR (||)
 ;
 
 // Um operador binario de baixa precedencia pode ser:
-operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de soma
-                             | '-'                   {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de subtracao
-                             | '|'                   {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador bitwise or
-                             | '&'                   {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador bitwise and
+operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de soma
+                             | '-'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de subtracao
+                             | '|'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador bitwise or
+                             | '&'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador bitwise and
                              | comparador_relacional {$$ = $1;} // Um comparador relacional 
                              | operador_logico       {$$ = $1;}     // Um operador logico
                              | '?' expressao ':'     {/*TODO Aqui essa exp deve ser inserida como segundo filho*/} // A 'parte' interna de uma expressao condicional
 ;
 
 // Um operador binario de alta precedencia pode ser:
-operador_binario_alta_prec:   '*' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de multiplicacao
-                            | '/' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de divisao
-                            | '%' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de modulore, 
-                            | '^' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, BINOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de exponenciacao
+operador_binario_alta_prec:   '*' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de multiplicacao
+                            | '/' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de divisao
+                            | '%' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de modulore, 
+                            | '^' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de exponenciacao
 ;
 
 // Um operador unario pode ser:
-operador_unario:   '+' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de positividade explicita
-                 | '-' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de inversao de sinal
-                 | '!' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de negacao
-                 | '&' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de acesso a endereco
-                 | '*' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de resolucao de ponteiros
-                 | '?' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de avaliacao de expressao
-                 | '#' {$$ = cria_nodo_intermed(yylval.valor_lexico.tipo, UNOP, yylval.valor_lexico.valor.nome, yylval.valor_lexico.linha_ocorrencia);} // O operador de acesso a tabela hash
+operador_unario:   '+' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de positividade explicita
+                 | '-' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de inversao de sinal
+                 | '!' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de negacao
+                 | '&' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de acesso a endereco
+                 | '*' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de resolucao de ponteiros
+                 | '?' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de avaliacao de expressao
+                 | '#' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de acesso a tabela hash
 ;
 
 %%
@@ -432,6 +459,6 @@ int yyerror(char const *s)
     /* Libera toda a memoria da AST sendo criada */
     libera(arvore);
 
-    /* Retorna a linha onde ocorreu o erro*/
-    return error_line;
+    /* Retorna 1 */
+    return 1;
 }

@@ -239,12 +239,22 @@ node_t *insere_no_filho(node_t **nodo_pai, node_t *nodo_filho)
         // Inicializa o ponteiro auxiliar com o filho do nodo pai
         node_t *aux = (*nodo_pai)->filhos;
 
-        // Itera pelos nodos filhos ate chegar no ultimo
-        while (aux->irmao != NULL)
-            aux = aux->irmao;
+        // Se o pai tem filhos
+        if (aux != NULL)
+        {
+            // Itera pelos nodos filhos ate chegar no ultimo
+            while (aux->irmao != NULL)
+                aux = aux->irmao;
 
-        // Quando chega no ultimo, insere o novo filho
-        aux->irmao = nodo_filho;
+            // Quando chega no ultimo, insere o novo filho
+            aux->irmao = nodo_filho;
+        }
+        // Se o pai nao tem filhos
+        else
+        {
+            // Novo nodo vira o filho
+            (*nodo_pai)->filhos = nodo_filho;
+        }
 
         // Retorna o nodo pai (Redundante)
         return *(nodo_pai);
@@ -299,31 +309,31 @@ node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *
     return cria_nodo_lexico(valor_lexico, tipo_nodo);
 }
 
-node_t *preenche_nodo(node_t **nodo_pai, node_t **filho_1, node_t **filho_2, node_t **filho_3, node_t **filho_4)
+node_t *preenche_nodo(node_t **nodo_pai, node_t *filho_1, node_t *filho_2, node_t *filho_3, node_t *filho_4)
 {
     // Se o nodo pai e o primeiro filho existirem
-    if (*nodo_pai != NULL && filho_1 != NULL && *filho_1 != NULL)
+    if (*nodo_pai != NULL && filho_1)
     {
         // Insere o filho 1
-        *nodo_pai = insere_no_filho(nodo_pai, *filho_1);
+        *nodo_pai = insere_no_filho(nodo_pai, filho_1);
 
         // Se o filho 2 existir
-        if (filho_2 != NULL && *filho_2 != NULL)
+        if (filho_2 != NULL)
         {
             // Insere o filho 2
-            *nodo_pai = insere_no_filho(nodo_pai, *filho_2);
+            *nodo_pai = insere_no_filho(nodo_pai, filho_2);
 
             // Se o filho 3 existir
-            if (filho_3 != NULL && *filho_3 != NULL)
+            if (filho_3 != NULL)
             {
                 // Insere o filho 3
-                *nodo_pai = insere_no_filho(nodo_pai, *filho_3);
+                *nodo_pai = insere_no_filho(nodo_pai, filho_3);
 
                 // Se o filho 4 existir
-                if (filho_4 != NULL && *filho_4 != NULL)
+                if (filho_4 != NULL)
                 {
                     // Insere o filho 4
-                    *nodo_pai = insere_no_filho(nodo_pai, *filho_4);
+                    *nodo_pai = insere_no_filho(nodo_pai, filho_4);
                 }
             }
         }
