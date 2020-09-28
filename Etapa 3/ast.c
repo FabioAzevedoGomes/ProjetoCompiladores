@@ -65,37 +65,8 @@ extern void remove_no(void *arvore)
         // Salva o primeiro irmao desta arvore
         aux_1 = ((node_t *)arvore)->irmao;
 
-        // Libera a cadeia de caracteres criada por strdup no scanner.l, caso haja uma
-        switch (((node_t *)arvore)->valor_lexico->tipo)
-        {
-        // Caracteres especiais, operadores compostos e identificadores
-        case CARACTERE_ESPECIAL:
-        case OPERADOR_COMPOSTO:
-        case IDENTIFICADOR:
-        case PALAVRA_RESERVADA:
-            // Libera o nome
-            printf("\n - Vou remover o nó: "); imprime_no((node_t*)arvore);
-            free(((node_t *)arvore)->valor_lexico->valor.nome);
-            break;
-        case LITERAL:
-            // Se for string, libera a string
-            if (((node_t *)arvore)->tipo == LIT_STRING)
-            {
-                printf("\n - Vou remover o nó: "); imprime_no((node_t*)arvore); 
-                free(((node_t *)arvore)->valor_lexico->valor.string);
-            }
-            else
-            {
-                printf("\n Não preciso remover o nó:"); imprime_no((node_t*)arvore);
-            }
-            
-            break;
-        default: // Nos demais nao faz nada
-            break;
-        }
-
-        // Remove a estrutura de valor lexico deste nodo
-        free(((node_t *)arvore)->valor_lexico);
+        // Libera a memoria usada para o valor lexico deste nodo (alocada em scanner.l)
+        libera_valor_lexico(((node_t*)arvore)->valor_lexico, ((node_t*)arvore)->tipo);
 
         // Remove o nodo informado
         free(arvore);
@@ -361,4 +332,28 @@ node_t *preenche_nodo(node_t **nodo_pai, node_t *filho_1, node_t *filho_2, node_
     }
 
     return NULL;
+}
+
+void libera_valor_lexico(valor_lexico_t* valor_lexico, Tipos_Nodos tipo)
+{
+    // Libera a cadeia de caracteres criada por strdup no scanner.l, caso haja uma
+    switch (valor_lexico->tipo)
+    {
+    // Caracteres especiais, operadores compostos e identificadores
+    case CARACTERE_ESPECIAL:
+    case OPERADOR_COMPOSTO:
+    case IDENTIFICADOR:
+    case PALAVRA_RESERVADA:
+        // Libera o nome
+        free(valor_lexico->valor.nome);
+        break;
+    case LITERAL:
+        // Se for string, libera a string
+        if (tipo == LIT_STRING)
+            free(valor_lexico->valor.string);
+    }
+
+    // Libera a estrutura
+    free(valor_lexico);
+
 }

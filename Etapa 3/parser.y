@@ -71,6 +71,33 @@
 %token<valor_lexico>TK_IDENTIFICADOR
 %token TOKEN_ERRO
 
+// Declara os caracteres especiais como tendo o tipo valor_lexico
+%token<valor_lexico> ',' 
+';' 
+':' 
+'('
+')' 
+'[' 
+']' 
+'{'
+'}' 
+'+' 
+'-' 
+'|' 
+'*' 
+'/' 
+'<' 
+'>' 
+'=' 
+'!' 
+'&' 
+'%' 
+'#' 
+'^' 
+'.' 
+'$' 
+'?'
+
 // Simbolo inicial
 %start programa
 
@@ -106,12 +133,19 @@ programa
 operador_unario 
 literal
 lista_argumentos
+operador_atrib
 %%
 
-// Um programa pode ser:
-programa:   /* empty */                 {$$ = NULL;} // Vazio
-          | declaracao_funcao programa  {arvore = $1; insere_no_comando(&$1,$2);} // Uma declaracao de funcao, seguida de mais programa
-          | var_global programa         {$$ = $2;/* Ignora var global */} // Uma definicao de variavel global, seguida de mais programa
+/**
+ * Um programa pode ser:
+ *
+ * Vazio
+ * Uma declaracao de funcao, seguida de mais programa
+ * Uma definicao de variavel, seguida de mais programa
+ */
+programa:   /* empty */                 {$$ = NULL;}                              // Nao cria nodo para vazio
+          | declaracao_funcao programa  {arvore = $1; insere_no_comando(&$1,$2);} // Insere o resto do programa como proximo da declaracao de funcao
+          | var_global programa         {$$ = $2;}                                // Ignora variaveis nao inicializadas
 ;
 
 
@@ -119,37 +153,45 @@ programa:   /* empty */                 {$$ = NULL;} // Vazio
 
 
 // Um tipo valido pode ser:
-tipo:   TK_PR_INT       {} // A palavra int
-      | TK_PR_FLOAT     {} // A palavra float
-      | TK_PR_CHAR      {} // A palavra char
-      | TK_PR_BOOL      {} // A palavra bool
-      | TK_PR_STRING    {} // A palavra string
+tipo:   TK_PR_INT       {/* Ignora palavras reservadas */} // A palavra int
+      | TK_PR_FLOAT     {/* Ignora palavras reservadas */} // A palavra float
+      | TK_PR_CHAR      {/* Ignora palavras reservadas */} // A palavra char
+      | TK_PR_BOOL      {/* Ignora palavras reservadas */} // A palavra bool
+      | TK_PR_STRING    {/* Ignora palavras reservadas */} // A palavra string
 ; 
 
-// Um literal valido pode ser:
-literal:   TK_LIT_INT       {$$ = cria_nodo_lexico($1, LIT_INT);} // Um literal aritmetico
-         | TK_LIT_FLOAT     {$$ = cria_nodo_lexico($1, LIT_FLOAT);} // Um literal logico
-         | TK_LIT_TRUE      {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal boolean true
-         | TK_LIT_FALSE     {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal boolean false
-         | TK_LIT_CHAR      {$$ = cria_nodo_lexico($1, LIT_CHAR);} // Um literal char
-         | TK_LIT_STRING    {$$ = cria_nodo_lexico($1, LIT_STRING);} // Um literal string
+/**Um literal valido pode ser:
+ *
+ * Um literal aritmetico
+ * Um literal logico
+ * Um literal boolean true
+ * Um literal boolean false
+ * Um literal char
+ * Um literal string
+ */
+literal:   TK_LIT_INT       {$$ = cria_nodo_lexico($1, LIT_INT);}    // Cria um nodo para o lit int
+         | TK_LIT_FLOAT     {$$ = cria_nodo_lexico($1, LIT_FLOAT);}  // Cria um nodo para o lit float
+         | TK_LIT_TRUE      {$$ = cria_nodo_lexico($1, LIT_BOOL);}   // Cria um nodo para o lit true
+         | TK_LIT_FALSE     {$$ = cria_nodo_lexico($1, LIT_BOOL);}   // Cria um nodo para o lit false
+         | TK_LIT_CHAR      {$$ = cria_nodo_lexico($1, LIT_CHAR);}   // Cria um nodo para o lit char
+         | TK_LIT_STRING    {$$ = cria_nodo_lexico($1, LIT_STRING);} // Cria um nodo para o lit string
 ;
 
 // Um tipo estatico valido pode ser:
-tipo_estatico:   TK_PR_STATIC tipo {} // A palavra static, seguida de um tipo
-               | tipo              {} // Apenas um tipo
+tipo_estatico:   TK_PR_STATIC tipo {/* Ignora delcaracoes de tipo */} // A palavra static, seguida de um tipo
+               | tipo              {/* Ignora delcaracoes de tipo */} // Apenas um tipo
 ;
 
 // Um tipo const pode ser:
-tipo_const:   TK_PR_CONST tipo  {} // A palavra const, seguida de um tipo
-            | tipo              {} // Apenas um tipo
+tipo_const:   TK_PR_CONST tipo  {/* Ignora delcaracoes de tipo */} // A palavra const, seguida de um tipo
+            | tipo              {/* Ignora delcaracoes de tipo */} // Apenas um tipo
 ;
 
 // Um tipo const estatico pode ser:
-tipo_const_estatico:   tipo                          {} // Apenas um tipo
-                     | TK_PR_STATIC tipo             {} // A palavra static seguida de um tipo
-                     | TK_PR_CONST tipo              {} // A palavra const seguida de um tipo
-                     | TK_PR_STATIC TK_PR_CONST tipo {} // A palavra const e static, seguidas de um tipo
+tipo_const_estatico:   tipo                          {/* Ignora delcaracoes de tipo */} // Apenas um tipo
+                     | TK_PR_STATIC tipo             {/* Ignora delcaracoes de tipo */} // A palavra static seguida de um tipo
+                     | TK_PR_CONST tipo              {/* Ignora delcaracoes de tipo */} // A palavra const seguida de um tipo
+                     | TK_PR_STATIC TK_PR_CONST tipo {/* Ignora delcaracoes de tipo */} // A palavra const e static, seguidas de um tipo
 ;
 
 
@@ -163,22 +205,30 @@ tipo_const_estatico:   tipo                          {} // Apenas um tipo
  * ... seguido de uma lista de identificadores...
  * ... e terminado por ponto e virgula (;)
  */ 
-var_global: tipo_estatico lista_identificadores_globais ';' {/* Ignora variavel nao inicializada*/} ;
+var_global: tipo_estatico lista_identificadores_globais ';' {libera_valor_lexico($3, DELIM);} // Libera a memoria usada no delimitador ponto e virgula (;)
+;
 
 /**
  * Uma lista de identificadores globais pode ser:
  *
  * Apenas um identificador
- *  OU
  * Um identificador, seguido de uma lista de identificadores, separados por virgula
  */
 lista_identificadores_globais:   identificador_global                                   {/* Ignora variavel nao inicializada*/} 
-                               | identificador_global ',' lista_identificadores_globais {/* Ignora variavel nao inicializada*/} 
+                               | identificador_global ',' lista_identificadores_globais {libera_valor_lexico($2, DELIM);} // Libera a memoria usada no delimitador virgula (,)
 ; 
 
-// Um identificador global pode ser:
-identificador_global:   TK_IDENTIFICADOR                    {/* Ignora variavel nao inicializada*/}  // Um identificador simples
-                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {/* Ignora variavel nao inicializada*/} // Um vetor, com seu tamanho inteiro positivo entre colchetes a direita
+/**
+ * Um identificador global pode ser:
+ *
+ * Um identificador simples
+ * Um identificador indexado por um literal inteiro positivo
+ */
+identificador_global:   TK_IDENTIFICADOR                    {libera_valor_lexico($1, ID);}     // Libera a memoria usada para o identificador  
+                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {libera_valor_lexico($1, ID);      // Libera a memoria usada para o identificador
+                                                             libera_valor_lexico($2, DELIM);   // Libera a memoria usada para o delimitador colchete ([)
+                                                             libera_valor_lexico($3, LIT_INT); // Libera a memoria usada para o literal inteiro
+                                                             libera_valor_lexico($4, DELIM);}  // Libera a memoria usada para o delimitador colchete (])
 ;
 
 
@@ -187,20 +237,35 @@ identificador_global:   TK_IDENTIFICADOR                    {/* Ignora variavel 
 
 /**
  * Uma declaracao de funcao e:
+ *
  * Um tipo estatico de retorno...
  * ...seguido pelo nome da funcao e sua assinatura ...
  * ... terminada por um bloco de comandos
  */
-declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ = cria_nodo_lexico($2, FUNC_LIST); $$ = preenche_nodo(&$$,$4, NULL, NULL, NULL);} ;
-
-// A assinatura de uma funcao pode ser:
-assinatura:   '(' ')'                    {/* Ignora declaracao da funcao*/} // Vazia, sendo caracterizada apenas pelos parenteses
-            | '(' lista_parametros ')'   {/* Ignora declaracao da funcao*/} // Um ou mais parametros entre parenteses
+declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ = cria_nodo_lexico($2, FUNC_LIST);          // Cria nodo com o id da funcao
+                                                                             $$ = preenche_nodo(&$$,$4, NULL, NULL, NULL);} // Insere o bloco de comandos como primeiro filho
 ;
 
-// Uma lista de parametros de uma funcao pode ser:
-lista_parametros:   parametro                      {/* Ignora declaracao da funcao*/} // Um unico parametro
-                  | parametro ',' lista_parametros {/* Ignora declaracao da funcao*/} // Um parametro seguido de uma lista de parametros, separados por virgula
+/**
+ * A assinatura de uma funcao pode ser:
+ *
+ * Vazia, caracterizada apenas pelos parenteses
+ * Um ou mais parametros entre parenteses
+ */
+assinatura:   '(' ')'                    {libera_valor_lexico($1, DELIM);  // Libera a memoria usada para o delimitador parenteses (
+                                          libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador parenteses )
+            | '(' lista_parametros ')'   {libera_valor_lexico($1, DELIM);  // Libera a memoria usada para o delimitador parenteses (
+                                          libera_valor_lexico($3, DELIM);} // Libera a memoria usada para o delimitador parenteses )
+;
+
+/**
+ * Uma lista de parametros de uma funcao pode ser:
+ *
+ * Um unico parametro
+ * Um parametro, seguido de uma lista de parametros separados por virugla (,)
+ */
+lista_parametros:   parametro                     {/* Ignora declaracao da funcao*/}
+                  | parametro ',' lista_parametros {libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador virgula (,)
 ;
 
 /**
@@ -211,33 +276,65 @@ lista_parametros:   parametro                      {/* Ignora declaracao da func
  *
  * OBS.: Nao pode ser vetor
  */
-parametro: tipo_const TK_IDENTIFICADOR {/* Ignora declaracao da funcao*/} ;
+parametro: tipo_const TK_IDENTIFICADOR {libera_valor_lexico($2, ID);} // Libera a memoria usada para o identificador 
+;
 
 
 // COMANDOS SIMPLES E BLOCOS DE COMANDOS
 
 
-// Um bloco de comandos pode ser:
-bloco_comandos:   '{' '}'                        {$$ = NULL;/* Nao cria nenhum filho */} // Vazio, sendo caracterizado apenas pelas chaves
-                | '{' lista_comandos_simples '}' {$$ = $2;} // Uma lista de comandos simples
+/**
+ * Um bloco de comandos pode ser:
+ *
+ * Vazio, sendo caracterizado apenas pelas chaves
+ * Uma lista de comandos simples entre chaves
+ */
+bloco_comandos:   '{' '}'                        {libera_valor_lexico($1, DELIM); // Libera a memoria usada para o delimitador {
+                                                  libera_valor_lexico($2, DELIM); // Libera a memoria usada para o delimitador }
+                                                  $$ = NULL;}                     // Nao contem nenhum comando
+                | '{' lista_comandos_simples '}' {libera_valor_lexico($1, DELIM); // Libera a memoria usada para o delimitador {
+                                                  libera_valor_lexico($3, DELIM); // Libera a memoria usada para o delimitador }
+                                                  $$ = $2;}                       // O primeiro da lista e o primeiro do bloco
 ;
 
-// Uma lista de comandos simples pode ser:
-lista_comandos_simples:   comando_simples                         {$$ = $1;} // Um unico comando simples
-                        | comando_simples lista_comandos_simples  {$$ = insere_no_comando(&$1, $2);} // Um comando simples, seguido de uma lista de comandos simples
+/** 
+ * Uma lista de comandos simples pode ser:
+ *
+ * Um unico comando simples
+ * Um comando simples, seguido de uma lista de comandos simples, separados por virgula (,)
+ */
+lista_comandos_simples:   comando_simples                         {$$ = $1;}                         // O comando e o primeiro
+                        | comando_simples lista_comandos_simples  {$$ = insere_no_comando(&$1, $2);} // A lista de comandos e o comando segunte do comando primeiro
 ;
 
-// Um comando simples pode ser:
-comando_simples:   controle_fluxo ';'         {$$ = $1;} // Um comando de controle de fluxo, terminado por ponto e virgula (;)
-                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_RETURN, "return", get_line_number()); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // Um return, seguido de uma expressao e terminado por ponto e virgula (;)
-                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "break", get_line_number());} // Um break, terminado por ponto e virgula (;)
-                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "continue", get_line_number());} // Um continue, terminado por ponto e virgula (;)
-                 | comando_shift ';'          {$$ = $1;} // Um comando de shift, terminado por ponto e virgula (;)
-                 | chamada_funcao ';'         {$$ = $1;} // Uma chamada de funcao, terminada por ponto e virgula (;)
-                 | comando_es ';'             {$$ = $1;} // Um comando de e/s, terminado por ponto e virgula (;)
-                 | atribuicao ';'             {$$ = $1;} // Uma atribuicao, terminada por ponto e virgula (;)
-                 | var_local ';'              {$$ = $1;} // Uma declaracao de variavel local, terminada por ponto e virgula (;)
-                 | bloco_comandos ';'         {$$ = $1;} // Um bloco de comandos, terminado por ponto e virgula (;)
+/**
+ * Um comando simples pode ser: (todos terminados por ponto e virgula (;))
+ *
+ * Um comando de controle de fluxo
+ * Um return, seguido de uma expressao 
+ * Um break
+ * Um continue
+ * Um comando de shift
+ * Uma chamada de funcao
+ * Um comando de e/s
+ * Uma atribuicao
+ * Uma declaracao de variavel local
+ * Um bloco de comandos
+ */
+comando_simples:   controle_fluxo ';'         {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
+                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_RETURN, "return", get_line_number()); // Cria um nodo para o comando de RETURN
+                                               $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);                                       // Insere a expressao como filho
+                                               libera_valor_lexico($3, DELIM);}                                                     // Libera a memoria usada para o delimitador (;)
+                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "break", get_line_number()); // Cria um nodo para o comando BREAK
+                                               libera_valor_lexico($2, DELIM);}                                                            // Libera a memoria usada para o delimitador (;)
+                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "continue", get_line_number()); // Cria um nodo para o comando CONTINUE
+                                               libera_valor_lexico($2, DELIM);}                                                               // Libera a memoria usada para o delimitador (;)
+                 | comando_shift ';'          {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
+                 | chamada_funcao ';'         {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
+                 | comando_es ';'             {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
+                 | atribuicao ';'             {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
+                 | var_local ';'              {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
+                 | bloco_comandos ';'         {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
 ;
 
 
@@ -248,21 +345,34 @@ comando_simples:   controle_fluxo ';'         {$$ = $1;} // Um comando de contro
  * Uma chamada de funcao e:
  *
  * O nome da funcao, seguido de parenteses sem argumentos
- *  OU
  * O nome da funcao, seguido de parenteses e uma lista de argumentos
  */
-chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = cria_nodo_lexico($1, FUNC_CALL);} 
-                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = cria_nodo_lexico($1, FUNC_CALL); $$ = preenche_nodo(&$$, $3, NULL, NULL, NULL);} 
+chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = cria_nodo_lexico($1, FUNC_CALL); // Cria um nodo para a chamada de funcao
+                                                             libera_valor_lexico($2, DELIM);       // Libera a memoria usada para o delimitador (
+                                                             libera_valor_lexico($3, DELIM);}      // Libera a memoria usada para o delimitador )
+                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = cria_nodo_lexico($1, FUNC_CALL);          // Cria um nodo para a chamada de funcao
+                                                             $$ = preenche_nodo(&$$, $3, NULL, NULL, NULL); // Insere a lista de argumentos como filho
+                                                             libera_valor_lexico($2, DELIM);                // Libera a memoria usada para o delimitador (;)
+                                                             libera_valor_lexico($4, DELIM);}               // Libera a memoria usada para o delimitador (;)
 ;
 
-// Uma lista de argumentos pode ser:
-lista_argumentos:   argumento                      {$$ = $1;} // Um unico argumento
-                  | argumento ',' lista_argumentos {$$ = preenche_nodo(&$1, $3, NULL, NULL, NULL);} // Um argumento seguido de uma lista de argumentos, separados por virgula
+/** Uma lista de argumentos pode ser:
+ *
+ * Um unico argumento
+ * Um argumento, seguido de uma lista de argumentos, separados por virgula
+ */
+lista_argumentos:   argumento                      {$$ = $1;}                                      // Retorna o nodo criado para esse argumento
+                  | argumento ',' lista_argumentos {$$ = preenche_nodo(&$1, $3, NULL, NULL, NULL); // Insere a lista de argumentos como filho do primeiro argumento
+                                                    libera_valor_lexico($2, DELIM);}               // Libera a memoria usada para o delimitador (,)
 ;
 
-// Um argumento pode ser:
-argumento: expressao {$$ = $1;} ; // Uma expressao
-
+/**
+ * Um argumento pode ser:
+ *
+ * Uma expressao
+ */
+argumento: expressao {$$ = $1;} // Retorna o nodo criado
+;
 
 // COMANDOS SIMPLES
 
@@ -270,9 +380,13 @@ argumento: expressao {$$ = $1;} ; // Uma expressao
  * Um vetor indexado e:
  *
  * Um identificador simples ...
- * ... seguido de uma empressao entre colchetes
+ * ... seguido de uma expressao entre colchetes
  */
-vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VEC_IND, "[]", $1->linha_ocorrencia); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);};
+vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VEC_IND, "[]", $1->linha_ocorrencia); // Cria um nodo para a indexacao
+                                                    $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);                // Insere um nodo do identificador como filho
+                                                    libera_valor_lexico($2, DELIM);   // Libera a memoria usada para o delimitador (;)
+                                                    libera_valor_lexico($4, DELIM);}  // Libera a memoria usada para o delimitador (;)
+;
 
 /**
  * Uma declaracao de variavel local e:
@@ -280,80 +394,113 @@ vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(CARA
  * Um tipo possivelmente const static, ...
  * ... seguido de uma lista de identificadores
  */
-var_local:   tipo_const_estatico lista_identificadores_locais {$$ = $2;} ;
+var_local: tipo_const_estatico lista_identificadores_locais {$$ = $2;} //Retorna o nodo criado para a lista
+;
 
 /**
  * Uma lista de identificadores locais pode ser:
  *
  * Um identificador local
- *  OU
  * Um identificador local, seguido de uma lista de identificadores locais, separados por virgula
  */
-lista_identificadores_locais:   identificador_local                                  {$$ = $1;}
-                              | identificador_local ',' lista_identificadores_locais {$$ = preenche_nodo(&$1, $3, NULL, NULL, NULL);}
+lista_identificadores_locais:   identificador_local                                  {$$ = $1;} // Retorna o nodo criado para este identificador
+                              | identificador_local ',' lista_identificadores_locais {$$ = preenche_nodo(&$1, $3, NULL, NULL, NULL); // Insere a lista de ids como filho do primeiro id
+                                                                                      libera_valor_lexico($2, DELIM);}               // Libera a memoria usada para o delimitador (;)
 ;
 
 /**
  * Um identificador local pode ser:
  *
  * Um identificador simples
- *  OU
  * Um identificador simples inicializado com um literal
- *  OU
  * Um identificador simples inicializado com outro identificador simples
  */
-identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;/* Nao considera os identificadores nao inicializados */} 
-                     | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = cria_nodo_lexico($2, VAR_INIT); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} 
-                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = cria_nodo_lexico($2, VAR_INIT); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), cria_nodo_lexico($1, ID), NULL, NULL);} 
+identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;                       // Ignora identificadores nao inicializados
+                                                                   libera_valor_lexico($1, DELIM);} // Libera a memoria usada para o identificador
+                     | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = cria_nodo_lexico($2, VAR_INIT);                                 // Cria um nodo para a inicializacao
+                                                                   $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);}  // Insere o id e o literal como filhos
+                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = cria_nodo_lexico($2, VAR_INIT);                                                      // Cria um nodo para a inicializacao
+                                                                   $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), cria_nodo_lexico($3, ID), NULL, NULL);} // Insere os ids como filhos
 ;
 
-// Uma atribuicao pode ser:
-atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VAR_ATRIB, "=", get_line_number()); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} // Uma atribuicao a um identificador simples
-            | vetor_indexado '=' expressao   {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VAR_ATRIB, "=", get_line_number()); $$ = preenche_nodo(&$$, $1, $3, NULL, NULL);} // Uma atribuicao a um vetor indexado por uma expressao // TODO Verificar memleak nos char especiais
+//Um operador de atribuicao e:
+operador_atrib: '=' {$$ = cria_nodo_lexico($1,VAR_ATRIB);} // Cria nodo para a operacao de atribuicao
 ;
 
-// Um comando de entrada ou saida pode ser:
-comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES,  "input", get_line_number()); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra input, seguida de um identificador
-            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES, "output", get_line_number()); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra output, seguida de um identificador
-            | TK_PR_OUTPUT literal          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES, "output", get_line_number()); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // A palavra output, seguida de um literal
+/** Uma atribuicao pode ser:
+ * 
+ * Uma atribuicao a um identificador simples
+ * Uma atribuicao a um identificador indexado
+ */
+atribuicao:   TK_IDENTIFICADOR operador_atrib expressao {$$ = preenche_nodo(&$2, cria_nodo_lexico($1, ID), $3, NULL, NULL);} // Insere o id e a expressao como filhos
+            | vetor_indexado operador_atrib expressao   {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Insere o vetor indexado e a expressao como filhos
 ;
 
-// Um operador de shift pode ser:
-operador_shift:   TK_OC_SL {$$ = cria_nodo_lexico($1, CMD_SHIFT);} // O operador de shift left (<<) 
-                | TK_OC_SR {$$ = cria_nodo_lexico($1, CMD_SHIFT);} // O operador de shift right (>>) 
+/** Um comando de entrada ou saida pode ser:
+ * 
+ * A palavra input, seguida de um identificador
+ * A palavra output, seguida de um identificador
+ * A palavra output, seguida de um literal
+ */
+comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES,  "input", get_line_number()); // Cria nodo para o comando de input
+                                             $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);}            // Insere o identificador como filho
+            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES, "output", get_line_number()); // Cria nodo para o comando de output
+                                             $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);}            // Insere o identificador como filho
+            | TK_PR_OUTPUT literal          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES, "output", get_line_number()); // Cria nodo para a palavra output
+                                             $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);}                                  // Insere o nodo literal como filho
+;
+
+/**
+ * Um operador de shift pode ser:
+ *
+ * O operador de shift left  <<
+ * O operador de shift right >> 
+ */
+operador_shift:   TK_OC_SL {$$ = cria_nodo_lexico($1, CMD_SHIFT);} // Cria nodo para o operador de shift left 
+                | TK_OC_SR {$$ = cria_nodo_lexico($1, CMD_SHIFT);} // Cria nodo para o operador de shift right
 ;
 
 /**
 * Um comando de shift pode ser:
 *
 * Um identificador, seguido de um operador de shift e um literal inteiro positivo
-*  OU
 * Um vetor indexado por uma expressao, seguido de um operador de shift e um literal inteiro positivo
 */
-comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {$$ = preenche_nodo(&$2, cria_nodo_lexico($1, ID), cria_nodo_lexico($3, LIT_INT), NULL, NULL);}
-               | vetor_indexado operador_shift TK_LIT_INT   {$$ = preenche_nodo(&$2, $1, cria_nodo_lexico($3, LIT_INT), NULL, NULL);}
+comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {$$ = preenche_nodo(&$2, cria_nodo_lexico($1, ID), cria_nodo_lexico($3, LIT_INT), NULL, NULL);} // Insere o id e literal int como filhos do shift
+               | vetor_indexado operador_shift TK_LIT_INT   {$$ = preenche_nodo(&$2, $1, cria_nodo_lexico($3, LIT_INT), NULL, NULL);}                       // Insere o vetor indexado e o literal int como filhos do shift
 ;
 
 
 // COMANDOS DE CONTROLE DE FLUXO
 
 
-// Um comando de controle de fluxo pode ser:
-controle_fluxo:   comando_if    {$$ = $1;} // Um comando if
-                | comando_for   {$$ = $1;} // Um comando for
-                | comando_while {$$ = $1;} // Um comando while
+/** 
+ * Um comando de controle de fluxo pode ser:
+ *
+ * Um comando if
+ * Um comando fot
+ * Um comando while
+ */
+controle_fluxo:   comando_if    {$$ = $1;} // Retorna o nodo do comando if
+                | comando_for   {$$ = $1;} // Retorna o nodo do comando for
+                | comando_while {$$ = $1;} // Retorna o nodo do comando while
 ;
 
 /**
  * Um comando if pode ser:
  *
  * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos
- *  OU
  * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos...
  * ... terminado com a palavra else, seguida de um bloco de comandos
  */
-comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_IF, "if", get_line_number()); $$ = preenche_nodo(&$$, $3, $5, NULL, NULL);} 
-            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_IF, "if", get_line_number()); $$ = preenche_nodo(&$$, $3, $5, $7, NULL);} 
+comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_IF, "if", get_line_number());  // Cria um nodo para o comando if
+                                                         $$ = preenche_nodo(&$$, $3, $5, NULL, NULL); // Insere a expressao e o primeiro comando do bloco como filhos
+                                                         libera_valor_lexico($2, DELIM);  // Libera a memoria usada para o delimitador (
+                                                         libera_valor_lexico($4, DELIM);} // Libera a memoria usada para o delimitador )
+            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_IF, "if", get_line_number()); // Cria um nodo para o comando if
+                                                                                   $$ = preenche_nodo(&$$, $3, $5, $7, NULL); // Insere a expressao, o primeiro e o segundo bloco de comandos como filhos
+                                                                                   libera_valor_lexico($2, DELIM);  // Libera a memoria usada para o delimitador (
+                                                                                   libera_valor_lexico($4, DELIM);} // Libera a memoria usada para o delimitador )
 ;
 
 /**
@@ -363,8 +510,13 @@ comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed
  * ... uma atribuicao, expressao e atribuicao, nessa ordem, separados por dois pontos (:)
  * ... terminado por um bloco de comandos
  */
-comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_FOR, "for", get_line_number());
-                                                                                       $$ = preenche_nodo(&$$, $3, $5, $7, $9);};
+comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_FOR, "for", get_line_number()); // Cria um nodo para o comando for
+                                                                                       $$ = preenche_nodo(&$$, $3, $5, $7, $9); // Insere a atriuicao inicial, a expressao de parada, a atribuicao de loop e o bloco de comandos como filhos
+                                                                                       libera_valor_lexico($2, DELIM);  // Libera a memoria usada para o delimitador (
+                                                                                       libera_valor_lexico($4, DELIM);  // Libera a memoria usada para o delimitador dois pontos :
+                                                                                       libera_valor_lexico($6, DELIM);  // Libera a memoria usada para o delimitador dois pontos :
+                                                                                       libera_valor_lexico($8, DELIM);} // Libera a memoria usada para o delimitador )
+;
 
 /**
  * Um comando while pode ser:
@@ -372,78 +524,147 @@ comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_com
  * A palavra while, seguida de uma expressao entre parenteses...
  * ... terminado pela palavra do, seguida de um bloco de comandos
  */
-comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_WHILE, "while", get_line_number()); 
-                                                                      $$ = preenche_nodo(&$$, $3, $6, NULL, NULL);} ;
-
+comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_WHILE, "while", get_line_number()); // Cria um nodo para o comando while
+                                                                      $$ = preenche_nodo(&$$, $3, $6, NULL, NULL); // Insere a expressao e o bloco de comandos como filhos
+                                                                      libera_valor_lexico($2, DELIM);  // Libera a memoria usada para o delimitador (
+                                                                      libera_valor_lexico($4, DELIM);} // Libera a memoria usada para o delimitador )
+;
 
 // EXPRESSOES
 
 
-// Uma expressao pode ser:
-expressao:   expressao operador_binario_baixa_prec termo {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Uma expressao associada a um termo, atraves de um operador de baixa precedencia
-           | termo                                       {$$ = $1;} // Apenas um termo
+/**
+ * Uma expressao pode ser:
+ *
+ * Uma expressao associada a um termo por um operador binario de baixa precedencia
+ * Uma termo apenas
+ */
+expressao:   expressao operador_binario_baixa_prec termo {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Insere a expressao e o termo como filhos do operador binario
+           | termo                                       {$$ = $1;}                                     // Retorna o nodo do termo
 ;
 
-// Um termo pode ser:
-termo:   termo operador_binario_alta_prec fator {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Um termo associado a um fator, atraves de um operador de alta precedencia
-       | fator                                  {$$ = $1;} // Apenas um fator
+/** Um termo pode ser:
+ *
+ * Um termo asoociado a um fator por um operador binario de alta precedencia
+ * Um fator apenas
+ */
+termo:   termo operador_binario_alta_prec fator {$$ = preenche_nodo(&$2, $1, $3, NULL, NULL);} // Insere o termo e o fator como filhos do operador binario
+       | fator                                  {$$ = $1;}                                     // Retorna o nodo do fator
 ;
 
-// Um fator pode ser:
-fator:   '(' expressao ')' {$$ = $2;} // Uma expressao entre parenteses
-       | operando          {$$ = $1;} // Um operando valido da linguagem
+/**
+ * Um fator pode ser:
+ *
+ * Uma expressao entre parenteses
+ * Um operando da linguagem
+ */
+fator:   '(' expressao ')' {$$ = $2;                         // Retorna o nodo da expressao
+                            libera_valor_lexico($1, DELIM);  // Libera a memoria usada para o delimitador (
+                            libera_valor_lexico($3, DELIM);} // Libera a memoria usada para o delimitador )
+       | operando          {$$ = $1;}                        // Retorna o nodo do operando
 ;
 
-// Um operando pode ser:
-operando:   TK_IDENTIFICADOR                   {$$ = cria_nodo_lexico($1, ID);} // Um identificador
-          | vetor_indexado                     {$$ = $1;} // Um vetor indexado por uma expressao
-          | TK_LIT_INT                         {$$ = cria_nodo_lexico($1, LIT_INT);} // Um literal inteiro
-          | TK_LIT_FLOAT                       {$$ = cria_nodo_lexico($1, LIT_FLOAT);} // Um literal float
-          | chamada_funcao                     {$$ = $1;}// Uma chamada de funcao
-          | TK_LIT_TRUE                        {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal TRUE
-          | TK_LIT_FALSE                       {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal FALSE
-          | operador_unario fator              {$$ = preenche_nodo(&$1, $2, NULL, NULL, NULL);} // Um operador unario aplicado a um fator
+/**
+ * Um operando pode ser:
+ *
+ * Um identificador
+ * Um vetor indexado
+ * Um literal inteiro
+ * Um literal float
+ * Uma chamada de funcao
+ * Um literal TRUE
+ * Um literal FALSE
+ * Um operador unario aplicado a um fator
+ */
+operando:   TK_IDENTIFICADOR       {$$ = cria_nodo_lexico($1, ID);}                 // Cria um nodo para o identificador
+          | vetor_indexado         {$$ = $1;}                                       // Retorna o nodo do vetor indexado
+          | TK_LIT_INT             {$$ = cria_nodo_lexico($1, LIT_INT);}            // Cria um nodo para o literal inteiro
+          | TK_LIT_FLOAT           {$$ = cria_nodo_lexico($1, LIT_FLOAT);}          // Cria um nodo para o literal float
+          | chamada_funcao         {$$ = $1;}                                       // Retorna o nodo da chamada de funcao
+          | TK_LIT_TRUE            {$$ = cria_nodo_lexico($1, LIT_BOOL);}           // Cria um nodo para o literal true
+          | TK_LIT_FALSE           {$$ = cria_nodo_lexico($1, LIT_BOOL);}           // Cria um nodo para o literal false
+          | operador_unario fator  {$$ = preenche_nodo(&$1, $2, NULL, NULL, NULL);} // Insere o fator como filho do operador unario
 ; 
 
-// Um comparador relacional pode ser:
-comparador_relacional:   TK_OC_GE {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de maior ou igual (>=)
-                       | TK_OC_LE {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de menor ou igual (<=)
-                       | TK_OC_EQ {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de igualdade (==)
-                       | TK_OC_NE {$$ = cria_nodo_lexico($1, BINOP);} // O comparador de diferenca (!=)
-                       | '<'      {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O comparador de menor
-                       | '>'      {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O comparador de maior
+/**
+ * Um comparador relacional pode ser:
+ *
+ * O comparador de maior ou igual (>=)
+ * O comparador de menor ou igual (<=)
+ * O comparador de igualdade (==)
+ * O comparador de diferenca (!=)
+ * O comparador de menor
+ * O comparador de maior
+ */
+comparador_relacional:   TK_OC_GE {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o comparador maior ou igual
+                       | TK_OC_LE {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o comparador menor ou igual
+                       | TK_OC_EQ {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o comparador igual
+                       | TK_OC_NE {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o comparador diferente
+                       | '<'      {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o comparador menor
+                       | '>'      {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o comparador maior
 ;
 
-// Um operador logico pode ser:
-operador_logico:   TK_OC_AND {$$ = cria_nodo_lexico($1, BINOP);} // O operdor AND (&&)
-                 | TK_OC_OR  {$$ = cria_nodo_lexico($1, BINOP);} // O operador OR (||)
+/* Um operador logico pode ser:
+ *
+ * O operador AND (&&)
+ * O operador OR  (||)
+ */
+operador_logico:   TK_OC_AND {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o operador AND
+                 | TK_OC_OR  {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o operador OR
 ;
 
-// Um operador binario de baixa precedencia pode ser:
-operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de soma
-                             | '-'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de subtracao
-                             | '|'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador bitwise or
-                             | '&'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador bitwise and
-                             | comparador_relacional {$$ = $1;} // Um comparador relacional 
-                             | operador_logico       {$$ = $1;}     // Um operador logico
-                             | '?' expressao ':'     {/*TODO Aqui essa exp deve ser inserida como segundo filho*/} // A 'parte' interna de uma expressao condicional
+/** Um operador binario de baixa precedencia pode ser:
+ *
+ * O operador de soma
+ * O operador de subtracao
+ * O operador bitwise or
+ * O operador bitwise and
+ * Um comparador relacional 
+ * Um operador logico
+ * A 'parte' interna de uma expressao condicional
+ */
+operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_lexico($1, BINOP);} // Cria um nodo para o operador de some
+                             | '-'                   {$$ = cria_nodo_lexico($1, BINOP);} // Cria um nodo para o operador de subtracao
+                             | '|'                   {$$ = cria_nodo_lexico($1, BINOP);} // Cria um nodo para o operador bitwise or
+                             | '&'                   {$$ = cria_nodo_lexico($1, BINOP);} // Cria um nodo para o operador bitwise and
+                             | comparador_relacional {$$ = $1;}                          // Retorna o nodo do comparador relacional 
+                             | operador_logico       {$$ = $1;}                          // Retorna o nodo do operador logico
+                             | '?' expressao ':'     {/* TODO Aqui essa exp deve ser inserida como segundo filho */
+                                                      libera_valor_lexico($1, DELIM);  // Libera a memoria usada para o delimitador interrogacao (?)
+                                                      libera_valor_lexico($3, DELIM);} // Libera a memoria usada para o delimitador dois pontos (:)
 ;
 
-// Um operador binario de alta precedencia pode ser:
-operador_binario_alta_prec:   '*' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de multiplicacao
-                            | '/' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de divisao
-                            | '%' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de modulore, 
-                            | '^' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de exponenciacao
+/**
+ * Um operador binario de alta precedencia pode ser:
+ *
+ * O operador de multiplicacao
+ * O operador de divisao
+ * O operador de modulo
+ * O operador de exponenciacao
+ */
+operador_binario_alta_prec:   '*' {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o operador de multiplicacao
+                            | '/' {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o operador de divisao
+                            | '%' {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o operador de modulo
+                            | '^' {$$ = cria_nodo_lexico($1, BINOP);} // Cria nodo para o operador de exponenciacao
 ;
 
-// Um operador unario pode ser:
-operador_unario:   '+' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de positividade explicita
-                 | '-' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de inversao de sinal
-                 | '!' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de negacao
-                 | '&' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de acesso a endereco
-                 | '*' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de resolucao de ponteiros
-                 | '?' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de avaliacao de expressao
-                 | '#' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de acesso a tabela hash
+/** Um operador unario pode ser:
+ *
+ * O operador de positividade explicita
+ * O operador de inversao de sinal
+ * O operador de negacao
+ * O operador de acesso a endereco
+ * O operador de resolucao de ponteiros
+ * O operador de avaliacao de expressao
+ * O operador de acesso a tabela hash
+ */
+operador_unario:   '+' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de positividade explicita
+                 | '-' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de inversao de sinal
+                 | '!' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de negacao
+                 | '&' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de acesso a endereco
+                 | '*' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de resolucao de ponteiros
+                 | '?' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de avaliacao de expressao
+                 | '#' {$$ = cria_nodo_lexico($1, UNOP);} // Cria nodo para o operador de acesso a tabela hash
 ;
 
 %%
@@ -457,9 +678,6 @@ int yyerror(char const *s)
     /* Sinaliza na saida padrao que ocorreu um erro sintatico */
     fprintf(stderr,"%s\nOn line %d\n", s, error_line);
     
-    /* Libera toda a memoria da AST sendo criada */
-    libera(arvore);
-
     /* Retorna 1 */
     return 1;
 }

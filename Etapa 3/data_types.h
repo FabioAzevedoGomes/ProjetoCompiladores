@@ -58,7 +58,8 @@ typedef enum Tipos_Nodo
     LIT_STRING,
     LIT_CHAR,
     LIT_BOOL,
-    ID
+    ID,
+    DELIM
 } Tipos_Nodos;
 
 /**

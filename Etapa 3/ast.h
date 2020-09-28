@@ -103,3 +103,10 @@ node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *
  * @returns        Ponteiro para o nodo pai
  */
 node_t *preenche_nodo(node_t **nodo_pai, node_t *filho_1, node_t *filho_2, node_t *filho_3, node_t *filho_4);
+
+/**
+ * Libera a memoria de um ponteiro do tipo valor_lexico de caracteres especiais
+ * @param valor_lexico Ponteiro para um estrutura do tipo valor_lexico que sera liberada
+ * @param tipo Tipo de valor armazenado, para que possa realizar free na posicao correta
+ */
+void libera_valor_lexico(valor_lexico_t* valor_lexico, Tipos_Nodos tipo);
