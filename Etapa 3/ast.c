@@ -72,13 +72,23 @@ extern void remove_no(void *arvore)
         case CARACTERE_ESPECIAL:
         case OPERADOR_COMPOSTO:
         case IDENTIFICADOR:
+        case PALAVRA_RESERVADA:
             // Libera o nome
+            printf("\n - Vou remover o nó: "); imprime_no((node_t*)arvore);
             free(((node_t *)arvore)->valor_lexico->valor.nome);
             break;
         case LITERAL:
             // Se for string, libera a string
             if (((node_t *)arvore)->tipo == LIT_STRING)
+            {
+                printf("\n - Vou remover o nó: "); imprime_no((node_t*)arvore); 
                 free(((node_t *)arvore)->valor_lexico->valor.string);
+            }
+            else
+            {
+                printf("\n Não preciso remover o nó:"); imprime_no((node_t*)arvore);
+            }
+            
             break;
         default: // Nos demais nao faz nada
             break;
@@ -133,7 +143,7 @@ void imprime_arestas_arvore(void *arvore)
 void imprime_no(void *arvore)
 {
     // So imprime nodos que existem
-    if (arvore != NULL)
+    if ((node_t*)arvore != NULL)
     {
         // Printa on inicio comum a todos os nodos
         printf("%p [label=\"", arvore);
@@ -144,7 +154,7 @@ void imprime_no(void *arvore)
         case LITERAL:
             switch (((node_t *)arvore)->tipo)
             {
-            case TK_LIT_CHAR:
+            case LIT_CHAR:
                 printf("%c", ((node_t *)arvore)->valor_lexico->valor.caractere);
                 break;
             case LIT_STRING:
@@ -158,6 +168,8 @@ void imprime_no(void *arvore)
                 break;
             case LIT_BOOL:
                 printf("%d", ((node_t *)arvore)->valor_lexico->valor.booleano);
+                break;
+            default:
                 break;
             }
             break;
@@ -195,7 +207,12 @@ void imprime_no(void *arvore)
             case TERNOP: // Para o operador ternario, usa o label '?:'
                 printf("?:");
                 break;
+            default: // ERRO
+                break;
             }
+            break;
+        case PALAVRA_RESERVADA:
+            printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome);
             break;
         // Erro
         default:
@@ -219,7 +236,7 @@ void imprime_aresta(void *arvore)
         while (aux != NULL)
         {
             // Printa o endereco do nodo pai e do filho
-            printf("%p, %p", (node_t *)arvore, aux);
+            printf("%p, %p\n", (node_t *)arvore, aux);
 
             // Passa para o proximo filho
             aux = aux->irmao;
@@ -227,7 +244,7 @@ void imprime_aresta(void *arvore)
 
         // Printa o proximo comando do nodo, se ele existe
         if (((node_t *)arvore)->prox_comando != NULL)
-            printf("%p, %p", (node_t *)arvore, ((node_t *)arvore)->prox_comando);
+            printf("%p, %p\n", (node_t *)arvore, ((node_t *)arvore)->prox_comando);
     }
 }
 
@@ -288,6 +305,7 @@ node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo_nodo)
 {
     // Cria um nodo novo e inicializa com os valores informados
     node_t *nodo = (node_t *)malloc(sizeof(node_t));
+    memset(nodo, 0, sizeof(node_t));
     nodo->valor_lexico = valor_lexico;
     nodo->tipo = tipo_nodo;
     nodo->filhos = NULL;
@@ -301,6 +319,7 @@ node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *
 {
     // Aloca a estrutura para o valor lexico
     valor_lexico_t *valor_lexico = (valor_lexico_t *)malloc(sizeof(valor_lexico_t));
+    memset(valor_lexico, 0, sizeof(valor_lexico_t));
     valor_lexico->linha_ocorrencia = linha;
     valor_lexico->valor.nome = strdup(valor);
     valor_lexico->tipo = tipo_token;

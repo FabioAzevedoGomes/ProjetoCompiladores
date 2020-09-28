@@ -110,7 +110,7 @@ lista_argumentos
 
 // Um programa pode ser:
 programa:   /* empty */                 {$$ = NULL;} // Vazio
-          | declaracao_funcao programa  {arvore = insere_no_comando((node_t**)&arvore,$2);} // Uma declaracao de funcao, seguida de mais programa
+          | declaracao_funcao programa  {arvore = $1; insere_no_comando(&$1,$2);} // Uma declaracao de funcao, seguida de mais programa
           | var_global programa         {$$ = $2;/* Ignora var global */} // Uma definicao de variavel global, seguida de mais programa
 ;
 
@@ -229,9 +229,9 @@ lista_comandos_simples:   comando_simples                         {$$ = $1;} // 
 
 // Um comando simples pode ser:
 comando_simples:   controle_fluxo ';'         {$$ = $1;} // Um comando de controle de fluxo, terminado por ponto e virgula (;)
-                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(COMANDO, CMD_RETURN, "return", -1); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // Um return, seguido de uma expressao e terminado por ponto e virgula (;) // TODO Esse -1?
-                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(COMANDO, CMD_BREAK_CONTINUE, "break", -1);} // Um break, terminado por ponto e virgula (;) // TODO Esse -1?
-                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(COMANDO, CMD_BREAK_CONTINUE, "continue", -1);} // Um continue, terminado por ponto e virgula (;) // TODO Esse -1?
+                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_RETURN, "return", get_line_number()); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // Um return, seguido de uma expressao e terminado por ponto e virgula (;)
+                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "break", get_line_number());} // Um break, terminado por ponto e virgula (;)
+                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "continue", get_line_number());} // Um continue, terminado por ponto e virgula (;)
                  | comando_shift ';'          {$$ = $1;} // Um comando de shift, terminado por ponto e virgula (;)
                  | chamada_funcao ';'         {$$ = $1;} // Uma chamada de funcao, terminada por ponto e virgula (;)
                  | comando_es ';'             {$$ = $1;} // Um comando de e/s, terminado por ponto e virgula (;)
@@ -272,7 +272,7 @@ argumento: expressao {$$ = $1;} ; // Uma expressao
  * Um identificador simples ...
  * ... seguido de uma empressao entre colchetes
  */
-vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(IDENTIFICADOR, VEC_IND, "[]", $1->linha_ocorrencia); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);};
+vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VEC_IND, "[]", $1->linha_ocorrencia); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);};
 
 /**
  * Uma declaracao de variavel local e:
@@ -308,14 +308,14 @@ identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;/* 
 ;
 
 // Uma atribuicao pode ser:
-atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = cria_nodo_intermed(COMANDO, VAR_ATRIB, "=", -1); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} // Uma atribuicao a um identificador simples   // TODO Esse -1?
-            | vetor_indexado '=' expressao   {$$ = cria_nodo_intermed(COMANDO, VAR_ATRIB, "=", -1); $$ = preenche_nodo(&$$, $1, $3, NULL, NULL);} // Uma atribuicao a um vetor indexado por uma expressao // TODO Esse -1? // TODO Verificar memleak nos char especiais
+atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VAR_ATRIB, "=", get_line_number()); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} // Uma atribuicao a um identificador simples
+            | vetor_indexado '=' expressao   {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VAR_ATRIB, "=", get_line_number()); $$ = preenche_nodo(&$$, $1, $3, NULL, NULL);} // Uma atribuicao a um vetor indexado por uma expressao // TODO Verificar memleak nos char especiais
 ;
 
 // Um comando de entrada ou saida pode ser:
-comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = cria_nodo_intermed(COMANDO, CMD_ES,  "input", -1); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra input, seguida de um identificador // TODO Esse -1?
-            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = cria_nodo_intermed(COMANDO, CMD_ES, "output", -1); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra output, seguida de um identificador // TODO Esse -1?
-            | TK_PR_OUTPUT literal          {$$ = cria_nodo_intermed(COMANDO, CMD_ES, "output", -1); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // A palavra output, seguida de um literal // TODO Esse -1?
+comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES,  "input", get_line_number()); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra input, seguida de um identificador
+            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES, "output", get_line_number()); $$ = preenche_nodo(&$$, cria_nodo_lexico($2, ID), NULL, NULL, NULL);} // A palavra output, seguida de um identificador
+            | TK_PR_OUTPUT literal          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_ES, "output", get_line_number()); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // A palavra output, seguida de um literal
 ;
 
 // Um operador de shift pode ser:
@@ -352,8 +352,8 @@ controle_fluxo:   comando_if    {$$ = $1;} // Um comando if
  * A palavra if, seguida de uma expressao entre parenteses e um bloco de comandos...
  * ... terminado com a palavra else, seguida de um bloco de comandos
  */
-comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_IF, "if", -1); $$ = preenche_nodo(&$$, $3, $5, NULL, NULL);} // TODO Esse -1? 
-            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_IF, "if", -1); $$ = preenche_nodo(&$$, $3, $5, $7, NULL);} // TODO Esste -1?
+comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_IF, "if", get_line_number()); $$ = preenche_nodo(&$$, $3, $5, NULL, NULL);} 
+            | TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_IF, "if", get_line_number()); $$ = preenche_nodo(&$$, $3, $5, $7, NULL);} 
 ;
 
 /**
@@ -363,7 +363,7 @@ comando_if:   TK_PR_IF '(' expressao ')' bloco_comandos {$$ = cria_nodo_intermed
  * ... uma atribuicao, expressao e atribuicao, nessa ordem, separados por dois pontos (:)
  * ... terminado por um bloco de comandos
  */
-comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_FOR, "for", -1); // TODO Esse -1?
+comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_FOR, "for", get_line_number());
                                                                                        $$ = preenche_nodo(&$$, $3, $5, $7, $9);};
 
 /**
@@ -372,7 +372,7 @@ comando_for: TK_PR_FOR '(' atribuicao ':' expressao ':' atribuicao ')' bloco_com
  * A palavra while, seguida de uma expressao entre parenteses...
  * ... terminado pela palavra do, seguida de um bloco de comandos
  */
-comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {$$ = cria_nodo_intermed(COMANDO, CMD_WHILE, "while", -1); // TODO Esse -1? 
+comando_while: TK_PR_WHILE '(' expressao ')' TK_PR_DO bloco_comandos {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_WHILE, "while", get_line_number()); 
                                                                       $$ = preenche_nodo(&$$, $3, $6, NULL, NULL);} ;
 
 
@@ -420,30 +420,30 @@ operador_logico:   TK_OC_AND {$$ = cria_nodo_lexico($1, BINOP);} // O operdor AN
 ;
 
 // Um operador binario de baixa precedencia pode ser:
-operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de soma
-                             | '-'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de subtracao
-                             | '|'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador bitwise or
-                             | '&'                   {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador bitwise and
+operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de soma
+                             | '-'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de subtracao
+                             | '|'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador bitwise or
+                             | '&'                   {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador bitwise and
                              | comparador_relacional {$$ = $1;} // Um comparador relacional 
                              | operador_logico       {$$ = $1;}     // Um operador logico
                              | '?' expressao ':'     {/*TODO Aqui essa exp deve ser inserida como segundo filho*/} // A 'parte' interna de uma expressao condicional
 ;
 
 // Um operador binario de alta precedencia pode ser:
-operador_binario_alta_prec:   '*' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de multiplicacao
-                            | '/' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de divisao
-                            | '%' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de modulore, 
-                            | '^' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, BINOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de exponenciacao
+operador_binario_alta_prec:   '*' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de multiplicacao
+                            | '/' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de divisao
+                            | '%' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de modulore, 
+                            | '^' {$$ = cria_nodo_lexico(yylval.valor_lexico, BINOP);} // O operador de exponenciacao
 ;
 
 // Um operador unario pode ser:
-operador_unario:   '+' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de positividade explicita
-                 | '-' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de inversao de sinal
-                 | '!' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de negacao
-                 | '&' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de acesso a endereco
-                 | '*' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de resolucao de ponteiros
-                 | '?' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de avaliacao de expressao
-                 | '#' {$$ = cria_nodo_intermed(yylval.valor_lexico->tipo, UNOP, yylval.valor_lexico->valor.nome, yylval.valor_lexico->linha_ocorrencia);} // O operador de acesso a tabela hash
+operador_unario:   '+' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de positividade explicita
+                 | '-' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de inversao de sinal
+                 | '!' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de negacao
+                 | '&' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de acesso a endereco
+                 | '*' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de resolucao de ponteiros
+                 | '?' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de avaliacao de expressao
+                 | '#' {$$ = cria_nodo_lexico(yylval.valor_lexico, UNOP);} // O operador de acesso a tabela hash
 ;
 
 %%

@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "data_types.h"
-#include "parser.tab.h"
 
 /**
  * Exporta a arvore de sintaxe abstrata (AST) para um arquivo CSV e a printa

@@ -170,6 +170,7 @@ void atrib_lexico(int tipo)
 
     // Aloca memoria para valor_lexico
     yylval.valor_lexico = (valor_lexico_t*)malloc(sizeof(valor_lexico_t));
+    memset(yylval.valor_lexico, 0, sizeof(valor_lexico_t));
 
     // Preenche a linha na estrutura valor_lexico da variavel global yylval
     yylval.valor_lexico->linha_ocorrencia = get_line_number();   // Linha de ocorrencia do token

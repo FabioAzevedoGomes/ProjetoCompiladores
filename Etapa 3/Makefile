@@ -1,5 +1,6 @@
 all: ast.o parser.tab.c lex.yy.c
-	gcc -c main.c lex.yy.c parser.tab.c
+	gcc -c main.c lex.yy.c 
+	gcc -c parser.tab.c
 	gcc -o etapa3 main.o ast.o lex.yy.o parser.tab.o -lfl -Wall
 
 parser.tab.c:
@@ -8,7 +9,7 @@ parser.tab.c:
 lex.yy.c:
 	flex scanner.l
 
-ast.o: parser.tab.c
+ast.o:
 	gcc -c ast.c -o ast.o -Wall
 
 clean:

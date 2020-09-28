@@ -19,7 +19,7 @@ typedef enum Tipos_Token
     OPERADOR_COMPOSTO,
     IDENTIFICADOR,
     LITERAL,
-    COMANDO
+    PALAVRA_RESERVADA
 } Tipos_Token;
 
 /**
@@ -67,7 +67,7 @@ typedef enum Tipos_Nodo
 typedef struct node
 {
     valor_lexico_t *valor_lexico; // Informacoes deste nodo
-    int tipo;                     // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
+    Tipos_Nodos tipo;              // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
     struct node *filhos;          // Ponteiro para o primeiro filho deste nodo
     struct node *irmao;           // Ponteiro para o proximo irmao deste nodo
 
