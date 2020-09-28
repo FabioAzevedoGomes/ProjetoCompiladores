@@ -79,7 +79,8 @@
 lista_comandos_simples 
 comando_es 
 comando_simples 
-var_local argumento 
+var_local 
+argumento 
 lista_identificadores_locais 
 identificador_local 
 atribuicao 
@@ -104,13 +105,13 @@ declaracao_funcao
 programa 
 operador_unario 
 literal
-
+lista_argumentos
 %%
 
 // Um programa pode ser:
-programa:   /* empty */                 {} // Vazio
-          | declaracao_funcao programa  {} // Uma declaracao de funcao, seguida de mais programa
-          | var_global programa         {} // Uma definicao de variavel global, seguida de mais programa
+programa:   /* empty */                 {$$ = NULL;} // Vazio
+          | declaracao_funcao programa  {arvore = insere_no_comando((node_t**)&arvore,$2);} // Uma declaracao de funcao, seguida de mais programa
+          | var_global programa         {$$ = $2;/* Ignora var global */} // Uma definicao de variavel global, seguida de mais programa
 ;
 
 
@@ -127,11 +128,11 @@ tipo:   TK_PR_INT       {} // A palavra int
 
 // Um literal valido pode ser:
 literal:   TK_LIT_INT       {$$ = cria_nodo_lexico($1, LIT_INT);} // Um literal aritmetico
-         | TK_LIT_FLOAT     {} // Um literal logico
-         | TK_LIT_TRUE      {} // Um literal boolean true
-         | TK_LIT_FALSE     {} // Um literal boolean false
-         | TK_LIT_CHAR      {} // Um literal char
-         | TK_LIT_STRING    {} // Um literal string
+         | TK_LIT_FLOAT     {$$ = cria_nodo_lexico($1, LIT_FLOAT);} // Um literal logico
+         | TK_LIT_TRUE      {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal boolean true
+         | TK_LIT_FALSE     {$$ = cria_nodo_lexico($1, LIT_BOOL);} // Um literal boolean false
+         | TK_LIT_CHAR      {$$ = cria_nodo_lexico($1, LIT_CHAR);} // Um literal char
+         | TK_LIT_STRING    {$$ = cria_nodo_lexico($1, LIT_STRING);} // Um literal string
 ;
 
 // Um tipo estatico valido pode ser:
@@ -162,7 +163,7 @@ tipo_const_estatico:   tipo                          {} // Apenas um tipo
  * ... seguido de uma lista de identificadores...
  * ... e terminado por ponto e virgula (;)
  */ 
-var_global: tipo_estatico lista_identificadores_globais ';' {} ;
+var_global: tipo_estatico lista_identificadores_globais ';' {/* Ignora variavel nao inicializada*/} ;
 
 /**
  * Uma lista de identificadores globais pode ser:
@@ -171,13 +172,13 @@ var_global: tipo_estatico lista_identificadores_globais ';' {} ;
  *  OU
  * Um identificador, seguido de uma lista de identificadores, separados por virgula
  */
-lista_identificadores_globais:   identificador_global                                   {} 
-                               | identificador_global ',' lista_identificadores_globais {} 
+lista_identificadores_globais:   identificador_global                                   {/* Ignora variavel nao inicializada*/} 
+                               | identificador_global ',' lista_identificadores_globais {/* Ignora variavel nao inicializada*/} 
 ; 
 
 // Um identificador global pode ser:
-identificador_global:   TK_IDENTIFICADOR |                     // Um identificador simples
-                        TK_IDENTIFICADOR '[' TK_LIT_INT ']' {} // Um vetor, com seu tamanho inteiro positivo entre colchetes a direita
+identificador_global:   TK_IDENTIFICADOR                    {/* Ignora variavel nao inicializada*/}  // Um identificador simples
+                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {/* Ignora variavel nao inicializada*/} // Um vetor, com seu tamanho inteiro positivo entre colchetes a direita
 ;
 
 
@@ -190,16 +191,16 @@ identificador_global:   TK_IDENTIFICADOR |                     // Um identificad
  * ...seguido pelo nome da funcao e sua assinatura ...
  * ... terminada por um bloco de comandos
  */
-declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {} ;
+declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ = cria_nodo_lexico($2, FUNC_LIST); $$ = preenche_nodo(&$$,$4, NULL, NULL, NULL);} ;
 
 // A assinatura de uma funcao pode ser:
-assinatura:   '(' ')'                    {} // Vazia, sendo caracterizada apenas pelos parenteses
-            | '(' lista_parametros ')'   {} // Um ou mais parametros entre parenteses
+assinatura:   '(' ')'                    {/* Ignora declaracao da funcao*/} // Vazia, sendo caracterizada apenas pelos parenteses
+            | '(' lista_parametros ')'   {/* Ignora declaracao da funcao*/} // Um ou mais parametros entre parenteses
 ;
 
 // Uma lista de parametros de uma funcao pode ser:
-lista_parametros:   parametro                      {} // Um unico parametro
-                  | parametro ',' lista_parametros {} // Um parametro seguido de uma lista de parametros, separados por virgula
+lista_parametros:   parametro                      {/* Ignora declaracao da funcao*/} // Um unico parametro
+                  | parametro ',' lista_parametros {/* Ignora declaracao da funcao*/} // Um parametro seguido de uma lista de parametros, separados por virgula
 ;
 
 /**
@@ -210,33 +211,33 @@ lista_parametros:   parametro                      {} // Um unico parametro
  *
  * OBS.: Nao pode ser vetor
  */
-parametro: tipo_const TK_IDENTIFICADOR {} ;
+parametro: tipo_const TK_IDENTIFICADOR {/* Ignora declaracao da funcao*/} ;
 
 
 // COMANDOS SIMPLES E BLOCOS DE COMANDOS
 
 
 // Um bloco de comandos pode ser:
-bloco_comandos:   '{' '}'                        {} // Vazio, sendo caracterizado apenas pelas chaves
+bloco_comandos:   '{' '}'                        {$$ = NULL;/* Nao cria nenhum filho */} // Vazio, sendo caracterizado apenas pelas chaves
                 | '{' lista_comandos_simples '}' {$$ = $2;} // Uma lista de comandos simples
 ;
 
 // Uma lista de comandos simples pode ser:
-lista_comandos_simples:   comando_simples                         {} // Um unico comando simples
-                        | comando_simples lista_comandos_simples  {} // Um comando simples, seguido de uma lista de comandos simples
+lista_comandos_simples:   comando_simples                         {$$ = $1;} // Um unico comando simples
+                        | comando_simples lista_comandos_simples  {$$ = insere_no_comando(&$1, $2);} // Um comando simples, seguido de uma lista de comandos simples
 ;
 
 // Um comando simples pode ser:
-comando_simples:   controle_fluxo ';'         {} // Um comando de controle de fluxo, terminado por ponto e virgula (;)
-                 | TK_PR_RETURN expressao ';' {} // Um return, seguido de uma expressao e terminado por ponto e virgula (;)
-                 | TK_PR_BREAK   ';'          {} // Um break, terminado por ponto e virgula (;)
-                 | TK_PR_CONTINUE ';'         {} // Um continue, terminado por ponto e virgula (;)
-                 | comando_shift ';'          {} // Um comando de shift, terminado por ponto e virgula (;)
-                 | chamada_funcao ';'         {} // Uma chamada de funcao, terminada por ponto e virgula (;)
-                 | comando_es ';'             {} // Um comando de e/s, terminado por ponto e virgula (;)
-                 | atribuicao ';'             {} // Uma atribuicao, terminada por ponto e virgula (;)
-                 | var_local ';'              {} // Uma declaracao de variavel local, terminada por ponto e virgula (;)
-                 | bloco_comandos ';'         {} // Um bloco de comandos, terminado por ponto e virgula (;)
+comando_simples:   controle_fluxo ';'         {$$ = $1;} // Um comando de controle de fluxo, terminado por ponto e virgula (;)
+                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(COMANDO, CMD_RETURN, "return", -1); $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);} // Um return, seguido de uma expressao e terminado por ponto e virgula (;) // TODO Esse -1?
+                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(COMANDO, CMD_BREAK_CONTINUE, "break", -1);} // Um break, terminado por ponto e virgula (;) // TODO Esse -1?
+                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(COMANDO, CMD_BREAK_CONTINUE, "continue", -1);} // Um continue, terminado por ponto e virgula (;) // TODO Esse -1?
+                 | comando_shift ';'          {$$ = $1;} // Um comando de shift, terminado por ponto e virgula (;)
+                 | chamada_funcao ';'         {$$ = $1;} // Uma chamada de funcao, terminada por ponto e virgula (;)
+                 | comando_es ';'             {$$ = $1;} // Um comando de e/s, terminado por ponto e virgula (;)
+                 | atribuicao ';'             {$$ = $1;} // Uma atribuicao, terminada por ponto e virgula (;)
+                 | var_local ';'              {$$ = $1;} // Uma declaracao de variavel local, terminada por ponto e virgula (;)
+                 | bloco_comandos ';'         {$$ = $1;} // Um bloco de comandos, terminado por ponto e virgula (;)
 ;
 
 
@@ -250,17 +251,17 @@ comando_simples:   controle_fluxo ';'         {} // Um comando de controle de fl
  *  OU
  * O nome da funcao, seguido de parenteses e uma lista de argumentos
  */
-chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {} 
-                | TK_IDENTIFICADOR '(' lista_argumentos ')' {} 
+chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = cria_nodo_lexico($1, FUNC_CALL);} 
+                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = cria_nodo_lexico($1, FUNC_CALL); $$ = preenche_nodo(&$$, $3, NULL, NULL, NULL);} 
 ;
 
 // Uma lista de argumentos pode ser:
-lista_argumentos:   argumento                      {} // Um unico argumento
-                  | argumento ',' lista_argumentos {} // Um argumento seguido de uma lista de argumentos, separados por virgula
+lista_argumentos:   argumento                      {$$ = $1;} // Um unico argumento
+                  | argumento ',' lista_argumentos {$$ = preenche_nodo(&$1, $3, NULL, NULL, NULL);} // Um argumento seguido de uma lista de argumentos, separados por virgula
 ;
 
 // Um argumento pode ser:
-argumento: expressao {} ; // Uma expressao
+argumento: expressao {$$ = $1;} ; // Uma expressao
 
 
 // COMANDOS SIMPLES
@@ -271,7 +272,7 @@ argumento: expressao {} ; // Uma expressao
  * Um identificador simples ...
  * ... seguido de uma empressao entre colchetes
  */
-vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {};
+vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(IDENTIFICADOR, VEC_IND, "[]", $1->linha_ocorrencia); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);};
 
 /**
  * Uma declaracao de variavel local e:
@@ -279,7 +280,7 @@ vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {};
  * Um tipo possivelmente const static, ...
  * ... seguido de uma lista de identificadores
  */
-var_local:   tipo_const_estatico lista_identificadores_locais {} ;
+var_local:   tipo_const_estatico lista_identificadores_locais {$$ = $2;} ;
 
 /**
  * Uma lista de identificadores locais pode ser:
@@ -289,7 +290,7 @@ var_local:   tipo_const_estatico lista_identificadores_locais {} ;
  * Um identificador local, seguido de uma lista de identificadores locais, separados por virgula
  */
 lista_identificadores_locais:   identificador_local                                  {$$ = $1;}
-                              | identificador_local ',' lista_identificadores_locais {$$ = $1;}
+                              | identificador_local ',' lista_identificadores_locais {$$ = preenche_nodo(&$1, $3, NULL, NULL, NULL);}
 ;
 
 /**
@@ -301,7 +302,7 @@ lista_identificadores_locais:   identificador_local                             
  *  OU
  * Um identificador simples inicializado com outro identificador simples
  */
-identificador_local:   TK_IDENTIFICADOR                           { /* Nao considera os identificadores nao inicializados */} 
+identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;/* Nao considera os identificadores nao inicializados */} 
                      | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = cria_nodo_lexico($2, VAR_INIT); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);} 
                      | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = cria_nodo_lexico($2, VAR_INIT); $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), cria_nodo_lexico($1, ID), NULL, NULL);} 
 ;
