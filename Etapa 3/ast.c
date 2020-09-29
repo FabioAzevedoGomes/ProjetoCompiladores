@@ -5,11 +5,11 @@ extern void exporta(void *arvore)
     // So exporta arvores que existem
     if (arvore != NULL)
     {
-        // Imprime a informacao dos nodos da arvore
-        imprime_nos_arvore(arvore);
-
         // Imprime a informacao das arestas da arvore
         imprime_arestas_arvore(arvore);
+
+        // Imprime a informacao dos nodos da arvore
+        imprime_nos_arvore(arvore);
     }
 }
 
