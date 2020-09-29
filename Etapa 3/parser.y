@@ -629,7 +629,8 @@ operador_binario_baixa_prec:   '+'                   {$$ = cria_nodo_lexico($1, 
                              | '&'                   {$$ = cria_nodo_lexico($1, BINOP);} // Cria um nodo para o operador bitwise and
                              | comparador_relacional {$$ = $1;}                          // Retorna o nodo do comparador relacional 
                              | operador_logico       {$$ = $1;}                          // Retorna o nodo do operador logico
-                             | '?' expressao ':'     {/* TODO Aqui essa exp deve ser inserida como segundo filho */
+                             | '?' expressao ':'     {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, TERNOP, "?:", get_line_number()); // Cria um nood para o operador ternario
+                                                      $$ = preenche_nodo(&$$,$2, NULL, NULL, NULL);     // Insere a expressao como filho
                                                       libera_valor_lexico($1, DELIM);  // Libera a memoria usada para o delimitador interrogacao (?)
                                                       libera_valor_lexico($3, DELIM);} // Libera a memoria usada para o delimitador dois pontos (:)
 ;

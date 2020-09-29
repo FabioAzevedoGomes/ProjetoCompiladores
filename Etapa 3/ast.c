@@ -159,6 +159,7 @@ void imprime_no(void *arvore)
             case FUNC_LIST:          // Para declaracao de funcao, usa o nome da mesma
             case UNOP:               // Para operadores unarios, usa o proprio operador
             case BINOP:              // Para operadores binarios, usa o proprio operador
+            case TERNOP:             // Para operadores ternarios, usa o proprio operador
             case CMD_SHIFT:          // Para comando de shift, usa o label << ou >>
             case CMD_BREAK_CONTINUE: // Para comando de break/continue, usa o label 'break' ou 'continue'
             case CMD_RETURN:         // Para comando de return, usa o label 'return'
@@ -174,9 +175,6 @@ void imprime_no(void *arvore)
                 break;
             case FUNC_CALL: // Para chamada de funcao, usa o label call + nome da funcao
                 printf("call %s", ((node_t *)arvore)->valor_lexico->valor.nome);
-                break;
-            case TERNOP: // Para o operador ternario, usa o label '?:'
-                printf("?:");
                 break;
             default: // ERRO
                 break;
