@@ -66,7 +66,7 @@ extern void remove_no(void *arvore)
         aux_1 = ((node_t *)arvore)->irmao;
 
         // Libera a memoria usada para o valor lexico deste nodo (alocada em scanner.l)
-        libera_valor_lexico(((node_t*)arvore)->valor_lexico, ((node_t*)arvore)->tipo);
+        libera_valor_lexico(((node_t *)arvore)->valor_lexico, ((node_t *)arvore)->tipo);
 
         // Remove o nodo informado
         free(arvore);
@@ -114,7 +114,7 @@ void imprime_arestas_arvore(void *arvore)
 void imprime_no(void *arvore)
 {
     // So imprime nodos que existem
-    if ((node_t*)arvore != NULL)
+    if ((node_t *)arvore != NULL)
     {
         // Printa on inicio comum a todos os nodos
         printf("%p [label=\"", arvore);
@@ -332,14 +332,18 @@ node_t *preenche_nodo(node_t **nodo_pai, node_t *filho_1, node_t *filho_2, node_
     return NULL;
 }
 
-void libera_valor_lexico(valor_lexico_t* valor_lexico, Tipos_Nodos tipo)
+void libera_valor_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo)
 {
     // Libera a cadeia de caracteres criada por strdup no scanner.l, caso haja uma
     switch (valor_lexico->tipo)
     {
-    // Caracteres especiais, operadores compostos e identificadores
-    case CARACTERE_ESPECIAL:
+    // Operador composto
     case OPERADOR_COMPOSTO:
+        // Libera o nome
+        free(valor_lexico->valor.nome);
+        break;
+    // Caracteres especiais e identificadores
+    case CARACTERE_ESPECIAL:
     case IDENTIFICADOR:
     case PALAVRA_RESERVADA:
         // Libera o nome
@@ -353,5 +357,4 @@ void libera_valor_lexico(valor_lexico_t* valor_lexico, Tipos_Nodos tipo)
 
     // Libera a estrutura
     free(valor_lexico);
-
 }

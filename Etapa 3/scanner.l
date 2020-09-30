@@ -225,6 +225,7 @@ void atrib_lexico(int tipo)
         case TK_OC_SL:
             yylval.valor_lexico->valor.nome = strdup(yytext); // Copia a cadeia de caracteres do operador
             yylval.valor_lexico->tipo = OPERADOR_COMPOSTO; // Atualiza o tipo
+            break;
         // Caracteres especiais
         default:
             yylval.valor_lexico->valor.nome = strdup(yytext); // Copia o caractere
