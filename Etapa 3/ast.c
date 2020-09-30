@@ -138,7 +138,7 @@ void imprime_no(void *arvore)
                 printf("%f", ((node_t *)arvore)->valor_lexico->valor.ponto_flutuante);
                 break;
             case LIT_BOOL:
-                printf("%d", ((node_t *)arvore)->valor_lexico->valor.booleano);
+                ((node_t *)arvore)->valor_lexico->valor.booleano ? printf("true") : printf("false");
                 break;
             default:
                 break;
