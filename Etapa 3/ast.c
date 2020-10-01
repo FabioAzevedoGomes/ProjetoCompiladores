@@ -146,7 +146,12 @@ void imprime_no(void *arvore)
             break;
         // Identificadores
         case IDENTIFICADOR:
+            // Se for uma funcao, escreve 'call' antes do nome
+            if(((node_t *)arvore)->tipo == FUNC_CALL)
+                printf("call ");
+
             printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome);
+
             break;
         // Operadores compostos
         case OPERADOR_COMPOSTO:
