@@ -129,10 +129,24 @@ typedef struct entrada_tabela_simbolos
  */
 typedef struct tabela_simbolos
 {
-    int tamanho;                 // Tamanho em memoria ocupado pela hash table
     int entradas;                // Numero de entradas na hash table
     symbol_table_entry_t *start; // Primeira entrada da tabela
 
+    struct tabela_simbolos *bottom; // Entrada inferior na pilha de tabelas de simbolos (NULL e o fundo)
+
 } symbol_table_t;
+
+/**
+ * Estrutura para manter controle da pilha de tabelas de simbolos 
+ * OBS.: O fundo da pilha SEMPRE deve conter a tabela de simbolos global.
+ *       Isso pode ser verificando quando entradas = 1.
+ */
+typedef struct pilha_tabela_simbolos
+{
+    int entradas;   // Numero de tabelas de simbolo atualmente empilhadas
+
+    symbol_table_t* top;    // Tabela de simbolos no topo da pilha
+
+} symbol_table_stack_t;
 
 #endif

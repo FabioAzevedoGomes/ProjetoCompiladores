@@ -34,8 +34,9 @@ symbol_table_t *cria_tabela_simbolos()
     // Tabela sendo criada
     symbol_table_t *tabela = (symbol_table_t *)malloc(sizeof(symbol_table_t));
     tabela->entradas = 0;
-    tabela->tamanho = sizeof(symbol_table_t);
     tabela->start = NULL;
+
+    tabela->bottom = NULL;
 
     return tabela;
 }
@@ -46,7 +47,7 @@ symbol_table_entry_t *cria_simbolo(char *chave, int linha, Tipos_Nodos natureza,
 
     // Aloca memoria
     symbol_table_entry_t *simbolo = (symbol_table_entry_t *)malloc(sizeof(symbol_table_entry_t));
-    
+
     // Inicializa os atributos comuns
     simbolo->chave = chave;
     simbolo->linha_declaracao = linha;
@@ -106,6 +107,8 @@ int insere_simbolo(symbol_table_t *tabela, symbol_table_entry_t *valor)
     // So insere em tabelas que existem
     if (tabela != NULL)
     {
+        tabela->entradas++;
+
         // Se ja ha simbolos na tabela
         if (tabela->entradas > 0)
         {
@@ -171,4 +174,53 @@ symbol_table_entry_t *consulta_simbolo(symbol_table_t *tabela, char *chave)
 
     // Se tabela e null ou nao encontrou a entrada, retorna null
     return NULL;
+}
+
+symbol_table_stack_t *cria_pilha()
+{
+    // Aloca a memoria para a pilha
+    symbol_table_stack_t *pilha = (symbol_table_stack_t *)malloc(sizeof(symbol_table_stack_t));
+
+    // Inicializa a pilha como vazia
+    pilha->entradas = 0;
+    pilha->top = NULL;
+
+    // Retorna referencia para a pilha
+    return pilha;
+}
+
+void push_st(symbol_table_stack_t *pilha, symbol_table_t *tabela)
+{
+    // So pusha em pilhas que existem
+    if (pilha != NULL && tabela != NULL)
+    {
+        // Atualiza a tabela de baixo da recebida
+        tabela->bottom = pilha->top;
+
+        // Atualiza a tabela do topo
+        pilha->top = tabela;
+
+        // Incrementa as entradas
+        pilha->entradas++;
+    }
+}
+
+symbol_table_t *pop_st(symbol_table_stack_t *pilha)
+{
+    symbol_table_t * tabela = NULL; // Tabela que sera poppada
+
+    // So poppa de pilhas que existem e com tabelas
+    if (pilha != NULL && pilha->top != NULL)
+    {
+        // Pega a tabela do topo da pilha
+        tabela = pilha->top;
+
+        // Atualiza o topo da pilha
+        pilha->top = tabela->bottom;
+
+        // Decrementa a contagem de entradas
+        pilha->entradas--;
+    }
+
+    return tabela;
 }

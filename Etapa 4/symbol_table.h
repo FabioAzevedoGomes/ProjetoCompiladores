@@ -4,6 +4,8 @@
 
 #include "data_types.h"
 
+// FUNCOES REFERENTES A TABELA DE SIMBOLOS
+
 /**
  * Retorna o tamanho associado aquele tipo
  * @param tipo  Qual o tipo
@@ -28,7 +30,7 @@ symbol_table_t *cria_tabela_simbolos();
  * @returns Ponteiro para a estrutura criada
  */
 symbol_table_entry_t *cria_simbolo(char *chave, int linha, Tipos_Nodos natureza,
-                                   Tipos_Linguagem tipo, int quant, valor_lexico_t* dados);
+                                   Tipos_Linguagem tipo, int quant, valor_lexico_t *dados);
 
 /**
  * Insere um novo simbolo como argumento de um simbolo declarado como funcao
@@ -52,3 +54,24 @@ int insere_simbolo(symbol_table_t *tabela, symbol_table_entry_t *valor);
  * @returns Struct symbol_t com as informacoes se encontrou, NULL caso contrario
  */
 symbol_table_entry_t *consulta_simbolo(symbol_table_t *tabela, char *chave);
+
+// FUNCOES REFERENTES A PILHA DE TABELAS DE SIMBOLOS
+
+/**
+ * Cria uma nova pilha de tabelas de simbolos 
+ */
+symbol_table_stack_t *cria_pilha();
+
+/**
+ * Pusha a tabela de simbolos na pilha informada
+ * @param pilha  Pilha que contem as tabelas
+ * @param tabela Tabela que sera inserida no topo da pilha
+ */
+void push_st(symbol_table_stack_t *pilha, symbol_table_t *tabela);
+
+/**
+ * Poppa a tabela de simbolos que esta no topo da pilha informada
+ * @param pilha Pilha que contem as tabelas
+ * @returns Ponteiro para a pilha que estava no topo da pilha, NULL se a pilha estava vazia 
+ */
+symbol_table_t *pop_st(symbol_table_stack_t *pilha);
