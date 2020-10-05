@@ -66,7 +66,7 @@ extern void remove_no(void *arvore)
         aux_1 = ((node_t *)arvore)->irmao;
 
         // Libera a memoria usada para o valor lexico deste nodo (alocada em scanner.l)
-        libera_valor_lexico(((node_t *)arvore)->valor_lexico, ((node_t *)arvore)->tipo);
+        libera_valor_lexico(((node_t *)arvore)->valor_lexico, ((node_t *)arvore)->natureza);
 
         // Remove o nodo informado
         free(arvore);
@@ -123,7 +123,7 @@ void imprime_no(void *arvore)
         {
         // Literais
         case LITERAL:
-            switch (((node_t *)arvore)->tipo)
+            switch (((node_t *)arvore)->natureza)
             {
             case LIT_CHAR:
                 printf("%c", ((node_t *)arvore)->valor_lexico->valor.caractere);
@@ -147,7 +147,7 @@ void imprime_no(void *arvore)
         // Identificadores
         case IDENTIFICADOR:
             // Se for uma funcao, escreve 'call' antes do nome
-            if(((node_t *)arvore)->tipo == FUNC_CALL)
+            if(((node_t *)arvore)->natureza == FUNC_CALL)
                 printf("call ");
 
             printf("%s", ((node_t *)arvore)->valor_lexico->valor.nome);
@@ -159,7 +159,7 @@ void imprime_no(void *arvore)
             break;
         // Caracteres especiais
         case CARACTERE_ESPECIAL:
-            switch (((node_t *)arvore)->tipo)
+            switch (((node_t *)arvore)->natureza)
             {
             case FUNC_LIST:          // Para declaracao de funcao, usa o nome da mesma
             case UNOP:               // Para operadores unarios, usa o proprio operador
@@ -275,12 +275,13 @@ extern node_t *insere_no_comando(node_t **nodo_primeiro, node_t *nodo_segundo)
     }
 }
 
-node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo_nodo)
+node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos natureza_nodo, Tipos_Linguagem tipo_nodo)
 {
     // Cria um nodo novo e inicializa com os valores informados
     node_t *nodo = (node_t *)malloc(sizeof(node_t));
     memset(nodo, 0, sizeof(node_t));
     nodo->valor_lexico = valor_lexico;
+    nodo->natureza = natureza_nodo;
     nodo->tipo = tipo_nodo;
     nodo->filhos = NULL;
     nodo->irmao = NULL;
@@ -289,7 +290,7 @@ node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo_nodo)
     return nodo;
 }
 
-node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *valor, int linha)
+node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos natureza_nodo, Tipos_Linguagem tipo_nodo, char *valor, int linha)
 {
     // Aloca a estrutura para o valor lexico
     valor_lexico_t *valor_lexico = (valor_lexico_t *)malloc(sizeof(valor_lexico_t));
@@ -299,7 +300,7 @@ node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *
     valor_lexico->tipo = tipo_token;
 
     // Cria um nodo com esta estrutura e retorna
-    return cria_nodo_lexico(valor_lexico, tipo_nodo);
+    return cria_nodo_lexico(valor_lexico, natureza_nodo, tipo_nodo);
 }
 
 node_t *preenche_nodo(node_t **nodo_pai, node_t *filho_1, node_t *filho_2, node_t *filho_3, node_t *filho_4)

@@ -189,38 +189,99 @@ symbol_table_stack_t *cria_pilha()
     return pilha;
 }
 
-void push_st(symbol_table_stack_t *pilha, symbol_table_t *tabela)
+void push_st(symbol_table_stack_t **pilha, symbol_table_t *tabela)
 {
+    // Se a pilha nao existe, cria ela
+    if (*pilha == NULL)
+        *pilha = cria_pilha();
+
     // So pusha em pilhas que existem
-    if (pilha != NULL && tabela != NULL)
+    if (*pilha != NULL && tabela != NULL)
     {
         // Atualiza a tabela de baixo da recebida
-        tabela->bottom = pilha->top;
+        tabela->bottom = (*pilha)->top;
 
         // Atualiza a tabela do topo
-        pilha->top = tabela;
+        (*pilha)->top = tabela;
 
         // Incrementa as entradas
-        pilha->entradas++;
+        (*pilha)->entradas++;
     }
 }
 
-symbol_table_t *pop_st(symbol_table_stack_t *pilha)
+symbol_table_t *pop_st(symbol_table_stack_t **pilha)
 {
-    symbol_table_t * tabela = NULL; // Tabela que sera poppada
+    symbol_table_t *tabela = NULL; // Tabela que sera poppada
 
     // So poppa de pilhas que existem e com tabelas
-    if (pilha != NULL && pilha->top != NULL)
+    if ((*pilha) != NULL && (*pilha)->top != NULL)
     {
         // Pega a tabela do topo da pilha
-        tabela = pilha->top;
+        tabela = (*pilha)->top;
 
         // Atualiza o topo da pilha
-        pilha->top = tabela->bottom;
+        (*pilha)->top = tabela->bottom;
 
         // Decrementa a contagem de entradas
-        pilha->entradas--;
+        (*pilha)->entradas--;
+    }
+    else
+    {
+        // Se a pilha nao existia, cria ela
+        *pilha = cria_pilha();
     }
 
     return tabela;
+}
+
+symbol_table_entry_t *consulta(symbol_table_stack_t **pilha, int global, char *chave)
+{
+    symbol_table_entry_t *entry = NULL; // Entrada da tabela de simbolos
+    symbol_table_t *tabela = NULL;      // Tabela de simbolos atual
+
+    // So consulta em pilhas que existem
+    if ((*pilha) != NULL)
+    {
+        // So consulta em tabelas que existem
+        if ((*pilha)->top != NULL)
+        {
+            // Se encontrar o simbolo na tabela local
+            if ((entry = consulta_simbolo((*pilha)->top, chave)) != NULL)
+            {
+                // Retorna o simbolo
+                return entry;
+            }
+            // Se nao encontrou na local, mas deve procurar em todas
+            else if (global == 1)
+            {
+                // Pega a referencia para a tabela de simbolos acima da local
+                tabela = (*pilha)->top->bottom;
+
+                // Enquanto houverem escopos maiores (outras tabelas de simbolos)
+                while (tabela != NULL)
+                {
+                    // Consulta a tabela, e se achar retorna
+                    if ((entry = consulta_simbolo(tabela, chave)) != NULL)
+                        return entry;
+                    else
+                        tabela = tabela->bottom;
+                }
+            }
+        }
+        else
+        {
+            // Se a tabela nao existia, cria uma
+            (*pilha)->top = cria_tabela_simbolos();
+        }
+    }
+    else
+    {
+        // Se a pilha nao existia, cria uma
+        *pilha = cria_pilha();
+
+        // E cria uma tabela
+        (*pilha)->top = cria_tabela_simbolos();
+    }
+
+    return entry;
 }

@@ -67,11 +67,22 @@ symbol_table_stack_t *cria_pilha();
  * @param pilha  Pilha que contem as tabelas
  * @param tabela Tabela que sera inserida no topo da pilha
  */
-void push_st(symbol_table_stack_t *pilha, symbol_table_t *tabela);
+void push_st(symbol_table_stack_t **pilha, symbol_table_t *tabela);
 
 /**
  * Poppa a tabela de simbolos que esta no topo da pilha informada
  * @param pilha Pilha que contem as tabelas
  * @returns Ponteiro para a pilha que estava no topo da pilha, NULL se a pilha estava vazia 
  */
-symbol_table_t *pop_st(symbol_table_stack_t *pilha);
+symbol_table_t *pop_st(symbol_table_stack_t **pilha);
+
+// FUNCOES REFERENTES A OBTENCAO E INSERCAO DE SIMBOLOS POR UM USUARIO EXTERNO
+
+/**
+ * Realiza uma consulta a pilha de tabelas de simbolos
+ * @param global Flag que indica se a busca deve ser apenas no escopo local ou no global também
+ * @param pilha Pilha de tabelas de simbolos
+ * @param chave Simbolo sendo procurado
+ * @returns Referencia para o valor do simbolo procurado, NULL se ele nao existe
+ */
+symbol_table_entry_t *consulta(symbol_table_stack_t **pilha, int global, char *chave);

@@ -1,6 +1,7 @@
 %{
     #include <stdio.h>
     #include "ast.h" // Funcoes da arvore e tipos de dados
+    #include "symbol_table.h" // Funcoes da tabela de simbolos
 
     /* Funcao de obtencao dos tokens */
     int yylex(void);
@@ -13,6 +14,9 @@
 
     /* Referencia para a AST sendo montada */
     extern void *arvore;
+
+    /* Pilha de tabelas de simbolos que sera usada na analise semantica*/
+    symbol_table_stack_t* pilha_tabelas_simbolos;
 %}
 
 /* Union que representa o valor lexico do token*/
@@ -134,6 +138,12 @@ operador_unario
 literal
 lista_argumentos
 operador_atrib
+tipo
+tipo_estatico
+tipo_const
+tipo_const_estatico
+parametro
+lista_identificadores_globais
 %%
 
 /**
@@ -153,11 +163,11 @@ programa:   /* empty */                 {$$ = NULL;}                            
 
 
 // Um tipo valido pode ser:
-tipo:   TK_PR_INT       {/* Ignora palavras reservadas */} // A palavra int
-      | TK_PR_FLOAT     {/* Ignora palavras reservadas */} // A palavra float
-      | TK_PR_CHAR      {/* Ignora palavras reservadas */} // A palavra char
-      | TK_PR_BOOL      {/* Ignora palavras reservadas */} // A palavra bool
-      | TK_PR_STRING    {/* Ignora palavras reservadas */} // A palavra string
+tipo:   TK_PR_INT       {$$ = cria_nodo_lexico(NULL, PR, TIPO_INT);}    // A palavra int
+      | TK_PR_FLOAT     {$$ = cria_nodo_lexico(NULL, PR, TIPO_FLOAT);}  // A palavra float
+      | TK_PR_CHAR      {$$ = cria_nodo_lexico(NULL, PR, TIPO_CHAR);}   // A palavra char
+      | TK_PR_BOOL      {$$ = cria_nodo_lexico(NULL, PR, TIPO_BOOL);}   // A palavra bool
+      | TK_PR_STRING    {$$ = cria_nodo_lexico(NULL, PR, TIPO_STRING);} // A palavra string
 ; 
 
 /**Um literal valido pode ser:
@@ -169,29 +179,29 @@ tipo:   TK_PR_INT       {/* Ignora palavras reservadas */} // A palavra int
  * Um literal char
  * Um literal string
  */
-literal:   TK_LIT_INT       {$$ = cria_nodo_lexico($1, LIT_INT);}    // Cria um nodo para o lit int
-         | TK_LIT_FLOAT     {$$ = cria_nodo_lexico($1, LIT_FLOAT);}  // Cria um nodo para o lit float
-         | TK_LIT_TRUE      {$$ = cria_nodo_lexico($1, LIT_BOOL);}   // Cria um nodo para o lit true
-         | TK_LIT_FALSE     {$$ = cria_nodo_lexico($1, LIT_BOOL);}   // Cria um nodo para o lit false
-         | TK_LIT_CHAR      {$$ = cria_nodo_lexico($1, LIT_CHAR);}   // Cria um nodo para o lit char
-         | TK_LIT_STRING    {$$ = cria_nodo_lexico($1, LIT_STRING);} // Cria um nodo para o lit string
+literal:   TK_LIT_INT       {$$ = cria_nodo_lexico($1, LIT_INT,    TIPO_INT);}    // Cria um nodo para o lit int
+         | TK_LIT_FLOAT     {$$ = cria_nodo_lexico($1, LIT_FLOAT,  TIPO_FLOAT);}  // Cria um nodo para o lit float
+         | TK_LIT_TRUE      {$$ = cria_nodo_lexico($1, LIT_BOOL,   TIPO_BOOL);}   // Cria um nodo para o lit true
+         | TK_LIT_FALSE     {$$ = cria_nodo_lexico($1, LIT_BOOL,   TIPO_BOOL);}   // Cria um nodo para o lit false
+         | TK_LIT_CHAR      {$$ = cria_nodo_lexico($1, LIT_CHAR,   TIPO_CHAR);}   // Cria um nodo para o lit char
+         | TK_LIT_STRING    {$$ = cria_nodo_lexico($1, LIT_STRING, TIPO_STRING);} // Cria um nodo para o lit string
 ;
 
 // Um tipo estatico valido pode ser:
-tipo_estatico:   TK_PR_STATIC tipo {/* Ignora delcaracoes de tipo */} // A palavra static, seguida de um tipo
-               | tipo              {/* Ignora delcaracoes de tipo */} // Apenas um tipo
+tipo_estatico:   TK_PR_STATIC tipo {$$ = $2;} // A palavra static, seguida de um tipo
+               | tipo              {$$ = $1;} // Apenas um tipo
 ;
 
 // Um tipo const pode ser:
-tipo_const:   TK_PR_CONST tipo  {/* Ignora delcaracoes de tipo */} // A palavra const, seguida de um tipo
-            | tipo              {/* Ignora delcaracoes de tipo */} // Apenas um tipo
+tipo_const:   TK_PR_CONST tipo  {$$ = $2;} // A palavra const, seguida de um tipo
+            | tipo              {$$ = $1;} // Apenas um tipo
 ;
 
 // Um tipo const estatico pode ser:
-tipo_const_estatico:   tipo                          {/* Ignora delcaracoes de tipo */} // Apenas um tipo
-                     | TK_PR_STATIC tipo             {/* Ignora delcaracoes de tipo */} // A palavra static seguida de um tipo
-                     | TK_PR_CONST tipo              {/* Ignora delcaracoes de tipo */} // A palavra const seguida de um tipo
-                     | TK_PR_STATIC TK_PR_CONST tipo {/* Ignora delcaracoes de tipo */} // A palavra const e static, seguidas de um tipo
+tipo_const_estatico:   tipo                          {$$ = $1;} // Apenas um tipo
+                     | TK_PR_STATIC tipo             {$$ = $2;} // A palavra static seguida de um tipo
+                     | TK_PR_CONST tipo              {$$ = $2;} // A palavra const seguida de um tipo
+                     | TK_PR_STATIC TK_PR_CONST tipo {$$ = $3;} // A palavra const e static, seguidas de um tipo
 ;
 
 
@@ -205,7 +215,8 @@ tipo_const_estatico:   tipo                          {/* Ignora delcaracoes de t
  * ... seguido de uma lista de identificadores...
  * ... e terminado por ponto e virgula (;)
  */ 
-var_global: tipo_estatico lista_identificadores_globais ';' {libera_valor_lexico($3, DELIM);} // Libera a memoria usada no delimitador ponto e virgula (;)
+var_global: tipo_estatico lista_identificadores_globais ';' {$2->tipo = $1->tipo; 
+                                                             libera_valor_lexico($3, DELIM);} // Libera a memoria usada no delimitador ponto e virgula (;)
 ;
 
 /**
@@ -224,10 +235,9 @@ lista_identificadores_globais:   identificador_global                           
  * Um identificador simples
  * Um identificador indexado por um literal inteiro positivo
  */
-identificador_global:   TK_IDENTIFICADOR                    {libera_valor_lexico($1, ID);}     // Libera a memoria usada para o identificador  
-                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {libera_valor_lexico($1, ID);      // Libera a memoria usada para o identificador
+identificador_global:   TK_IDENTIFICADOR                    {/*TODO Insere na tabela de simbolos global*/}     // Cria entrada na tabela de simbolos para o identificador
+                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {/*TODO Insere na tabela de simbolos global*/ 
                                                              libera_valor_lexico($2, DELIM);   // Libera a memoria usada para o delimitador colchete ([)
-                                                             libera_valor_lexico($3, LIT_INT); // Libera a memoria usada para o literal inteiro
                                                              libera_valor_lexico($4, DELIM);}  // Libera a memoria usada para o delimitador colchete (])
 ;
 
@@ -241,9 +251,10 @@ identificador_global:   TK_IDENTIFICADOR                    {libera_valor_lexico
  * Um tipo estatico de retorno...
  * ...seguido pelo nome da funcao e sua assinatura ...
  * ... terminada por um bloco de comandos
- */
-declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ = cria_nodo_lexico($2, FUNC_LIST);          // Cria nodo com o id da funcao
-                                                                             $$ = preenche_nodo(&$$,$4, NULL, NULL, NULL);} // Insere o bloco de comandos como primeiro filho
+ */ 
+declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ = cria_nodo_lexico($2, FUNC_LIST, $1->tipo); // Cria nodo com o id da funcao
+                                                                             $$ = preenche_nodo(&$$,$4, NULL, NULL, NULL); // Insere o bloco de comandos como primeiro filho
+                                                                             /*TODO Adicionar os argumentos na lista de args da tabela de simbolos*/} 
 ;
 
 /**
@@ -264,7 +275,7 @@ assinatura:   '(' ')'                    {libera_valor_lexico($1, DELIM);  // Li
  * Um unico parametro
  * Um parametro, seguido de uma lista de parametros separados por virugla (,)
  */
-lista_parametros:   parametro                     {/* Ignora declaracao da funcao*/}
+lista_parametros:   parametro                     {/*TODO Insere na tabela de simbolos da funcao e args da funcao pai */}
                   | parametro ',' lista_parametros {libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador virgula (,)
 ;
 
@@ -276,7 +287,7 @@ lista_parametros:   parametro                     {/* Ignora declaracao da funca
  *
  * OBS.: Nao pode ser vetor
  */
-parametro: tipo_const TK_IDENTIFICADOR {libera_valor_lexico($2, ID);} // Libera a memoria usada para o identificador 
+parametro: tipo_const TK_IDENTIFICADOR {$$ = cria_nodo_lexico($2, ID, $1->tipo);} // Libera a memoria usada para o identificador 
 ;
 
 
@@ -294,7 +305,8 @@ bloco_comandos:   '{' '}'                        {libera_valor_lexico($1, DELIM)
                                                   $$ = NULL;}                     // Nao contem nenhum comando
                 | '{' lista_comandos_simples '}' {libera_valor_lexico($1, DELIM); // Libera a memoria usada para o delimitador {
                                                   libera_valor_lexico($3, DELIM); // Libera a memoria usada para o delimitador }
-                                                  $$ = $2;}                       // O primeiro da lista e o primeiro do bloco
+                                                  $$ = $2;                       // O primeiro da lista e o primeiro do bloco
+                                                  push_st(&symbol_table, cria_tabela_simbolos());} // Coloca uma nova tabela de simbolos no topo da pilha
 ;
 
 /** 
@@ -322,12 +334,12 @@ lista_comandos_simples:   comando_simples                         {$$ = $1;}    
  * Um bloco de comandos
  */
 comando_simples:   controle_fluxo ';'         {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
-                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_RETURN, "return", get_line_number()); // Cria um nodo para o comando de RETURN
+                 | TK_PR_RETURN expressao ';' {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_RETURN, PR, "return", get_line_number()); // Cria um nodo para o comando de RETURN
                                                $$ = preenche_nodo(&$$, $2, NULL, NULL, NULL);                                       // Insere a expressao como filho
                                                libera_valor_lexico($3, DELIM);}                                                     // Libera a memoria usada para o delimitador (;)
-                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "break", get_line_number()); // Cria um nodo para o comando BREAK
+                 | TK_PR_BREAK   ';'          {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, PR, "break", get_line_number()); // Cria um nodo para o comando BREAK
                                                libera_valor_lexico($2, DELIM);}                                                            // Libera a memoria usada para o delimitador (;)
-                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, "continue", get_line_number()); // Cria um nodo para o comando CONTINUE
+                 | TK_PR_CONTINUE ';'         {$$ = cria_nodo_intermed(PALAVRA_RESERVADA, CMD_BREAK_CONTINUE, PR, "continue", get_line_number()); // Cria um nodo para o comando CONTINUE
                                                libera_valor_lexico($2, DELIM);}                                                               // Libera a memoria usada para o delimitador (;)
                  | comando_shift ';'          {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
                  | chamada_funcao ';'         {$$ = $1; libera_valor_lexico($2, DELIM);} // Libera a memoria usada para o delimitador (;)
@@ -347,16 +359,17 @@ comando_simples:   controle_fluxo ';'         {$$ = $1; libera_valor_lexico($2, 
  * O nome da funcao, seguido de parenteses sem argumentos
  * O nome da funcao, seguido de parenteses e uma lista de argumentos
  */
-chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = cria_nodo_lexico($1, FUNC_CALL); // Cria um nodo para a chamada de funcao
+chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = cria_nodo_lexico($1, FUNC_CALL, /*TODO Consulta a tabela de simbolos, descobre o tipo desse id*/); // Cria um nodo para a chamada de funcao
                                                              libera_valor_lexico($2, DELIM);       // Libera a memoria usada para o delimitador (
                                                              libera_valor_lexico($3, DELIM);}      // Libera a memoria usada para o delimitador )
-                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = cria_nodo_lexico($1, FUNC_CALL);          // Cria um nodo para a chamada de funcao
+                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = cria_nodo_lexico($1, FUNC_CALL, /*TODO Consulta a tabela de simbolos, descobre o tipo desse id*/);          // Cria um nodo para a chamada de funcao
                                                              $$ = preenche_nodo(&$$, $3, NULL, NULL, NULL); // Insere a lista de argumentos como filho
                                                              libera_valor_lexico($2, DELIM);                // Libera a memoria usada para o delimitador (;)
                                                              libera_valor_lexico($4, DELIM);}               // Libera a memoria usada para o delimitador (;)
 ;
 
-/** Uma lista de argumentos pode ser:
+/** 
+ * Uma lista de argumentos pode ser:
  *
  * Um unico argumento
  * Um argumento, seguido de uma lista de argumentos, separados por virgula
@@ -382,8 +395,8 @@ argumento: expressao {$$ = $1;} // Retorna o nodo criado
  * Um identificador simples ...
  * ... seguido de uma expressao entre colchetes
  */
-vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VEC_IND, "[]", $1->linha_ocorrencia); // Cria um nodo para a indexacao
-                                                    $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID), $3, NULL, NULL);                // Insere um nodo do identificador como filho
+vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = cria_nodo_intermed(CARACTERE_ESPECIAL, VEC_IND, /*TODO Verifica tabela de simbolos, encontra o tipo desse id*/, "[]", $1->linha_ocorrencia); // Cria um nodo para a indexacao
+                                                    $$ = preenche_nodo(&$$, cria_nodo_lexico($1, ID, /*TODO Verifica tabela de simbolos, encontra o tipo desse id*/), $3, NULL, NULL);                // Insere um nodo do identificador como filho
                                                     libera_valor_lexico($2, DELIM);   // Libera a memoria usada para o delimitador (;)
                                                     libera_valor_lexico($4, DELIM);}  // Libera a memoria usada para o delimitador (;)
 ;

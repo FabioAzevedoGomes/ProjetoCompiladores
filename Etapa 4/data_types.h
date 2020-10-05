@@ -64,8 +64,21 @@ typedef enum Tipos_Nodos
     LIT_CHAR,
     LIT_BOOL,
     ID,
-    DELIM
+    DELIM,
+    PR
 } Tipos_Nodos;
+
+// Os tipos da linguagem
+typedef enum Tipos_Linguagem
+{
+    TIPO_INT,
+    TIPO_FLOAT,
+    TIPO_CHAR,
+    TIPO_BOOL,
+    TIPO_STRING,
+    TIPO_NULL   // Para tipos indeterminados e/ou parciais
+
+} Tipos_Linguagem;
 
 /**
  * Nodo da arvore de sintaxe abstrata que sera gerada 
@@ -73,7 +86,8 @@ typedef enum Tipos_Nodos
 typedef struct node
 {
     valor_lexico_t *valor_lexico; // Informacoes deste nodo
-    Tipos_Nodos tipo;             // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
+    Tipos_Nodos natureza;         // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
+    Tipos_Linguagem tipo;         // Tipo deste nodo de acordo com a tipagem da linguagem
     struct node *filhos;          // Ponteiro para o primeiro filho deste nodo
     struct node *irmao;           // Ponteiro para o proximo irmao deste nodo
 
@@ -89,18 +103,6 @@ typedef struct node
 } node_t;
 
 // Etapa 4
-
-// Os tipos da linguagem
-typedef enum Tipos_Linguagem
-{
-    TIPO_INT,
-    TIPO_FLOAT,
-    TIPO_CHAR,
-    TIPO_BOOL,
-    TIPO_STRING,
-    TIPO_NULL
-
-} Tipos_Linguagem;
 
 /**
  * Uma entrada na tabela hash 
@@ -143,9 +145,9 @@ typedef struct tabela_simbolos
  */
 typedef struct pilha_tabela_simbolos
 {
-    int entradas;   // Numero de tabelas de simbolo atualmente empilhadas
+    int entradas; // Numero de tabelas de simbolo atualmente empilhadas
 
-    symbol_table_t* top;    // Tabela de simbolos no topo da pilha
+    symbol_table_t *top; // Tabela de simbolos no topo da pilha
 
 } symbol_table_stack_t;
 

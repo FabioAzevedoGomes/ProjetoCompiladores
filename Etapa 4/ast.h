@@ -77,20 +77,23 @@ node_t *insere_no_comando(node_t **nodo_primeiro, node_t *nodo_segundo);
 /**
  * Aloca memoria para uma estrutura do tipo nodo, e inicializa com o valor lexico informado
  * @param valor_lexico Ponteiro para a struct do nodo deste token
- * @param tipo_nodo Tipo deste nodo
+ * @param natureza_nodo Natureza deste nodo (Palavras reservadas, etc.)
+ * @param tipo_nodo Tipo (da linguagem) deste nodo
  */
-node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos tipo_nodo);
+node_t *cria_nodo_lexico(valor_lexico_t *valor_lexico, Tipos_Nodos natureza_nodo, Tipos_Linguagem tipo_nodo);
 
 /**
  * Cria (aloca memoria para) um a estrutura do tipo valor lexico com os valores informados
  * Cria um nodo correspondente chamando cria_nodo_lexico e o retorna
  * Equivale a criar um nodo 'artificial' para as PRs e operadores
- * @param tipo Tipo deste token, de acordo com os tipos estendidos do arquivo data_types.h
+ * @param tipo_token Tipo deste token, de acordo com os tipos estendidos do arquivo data_types.h
+ * @param natureza_nodo Natureza deste nodo (Palavras reservadas, etc.)
+ * @param tipo_nodo Tipo (da linguagem) deste nodo
  * @param valor Valor deste token
  * @param linha Linha onde ocorreu este token (pode ser -1 para indicar nodo artificial onde esta info nao e coletada, como for/if)
  * @returns Ponteiro para a struct do nodo deste token
  */
-node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos tipo_nodo, char *valor, int linha);
+node_t *cria_nodo_intermed(Tipos_Token tipo_token, Tipos_Nodos natureza_nodo, Tipos_Linguagem tipo_nodo, char *valor, int linha);
 
 /**
  * Preenche o nodo informado com os filhos providos
