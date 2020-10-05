@@ -1,3 +1,8 @@
+#ifndef DATA_TYPES_H
+#define DATA_TYPES_H
+
+// Etapa 3
+
 /**
  * Union com os diferentes tipos de valores para os tokens correspondentes 
  */
@@ -34,7 +39,7 @@ typedef struct valor_lexico
 } valor_lexico_t;
 
 // Os tipos possiveis de nodo da arvore
-typedef enum Tipos_Nodo
+typedef enum Tipos_Nodos
 {
     FUNC_LIST,
     CMD_LIST,
@@ -68,7 +73,7 @@ typedef enum Tipos_Nodo
 typedef struct node
 {
     valor_lexico_t *valor_lexico; // Informacoes deste nodo
-    Tipos_Nodos tipo;              // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
+    Tipos_Nodos tipo;             // Tipo deste nodo (Especificacao sobre if, for, atrib, etc)
     struct node *filhos;          // Ponteiro para o primeiro filho deste nodo
     struct node *irmao;           // Ponteiro para o proximo irmao deste nodo
 
@@ -82,3 +87,52 @@ typedef struct node
     struct node *prox_comando;
 
 } node_t;
+
+// Etapa 4
+
+// Os tipos da linguagem
+typedef enum Tipos_Linguagem
+{
+    TIPO_INT,
+    TIPO_FLOAT,
+    TIPO_CHAR,
+    TIPO_BOOL,
+    TIPO_STRING,
+    TIPO_NULL
+
+} Tipos_Linguagem;
+
+/**
+ * Uma entrada na tabela hash 
+ */
+typedef struct entrada_tabela_simbolos
+{
+    char *chave; // Chave da hash table (Vai ser o nome da variavel/funcao)
+
+    int linha_declaracao; // Linha onde o simbolo foi declarado TODO Porque se ja temos o valor_lexico?
+    Tipos_Nodos natureza; // Natureza deste simbolo (literal, string, etc)
+    Tipos_Linguagem tipo; // Tipo da linguagem ao qual este simbolo pertence
+    int tamanho;          // Tamanho ocupado por este simbolo
+
+    int arg_count;                            // Contagem de argumentos, caso for uma funcao, -1 caso contrario
+    struct entrada_tabela_simbolos *args;     // Argumentos que este simbolo recebe (Se ele for uma funcao)
+    struct entrada_tabela_simbolos *prox_arg; // Ponteiro para o proximo argumento da lista (para args de funcoes)
+
+    valor_lexico_t *dados; // Dados do valor deste simbolo
+
+    struct entrada_tabela_simbolos *prox; // Proxima entrada na tabela
+
+} symbol_table_entry_t;
+
+/**
+ * Estrutura para a tabela de simbolos 
+ */
+typedef struct tabela_simbolos
+{
+    int tamanho;                 // Tamanho em memoria ocupado pela hash table
+    int entradas;                // Numero de entradas na hash table
+    symbol_table_entry_t *start; // Primeira entrada da tabela
+
+} symbol_table_t;
+
+#endif
