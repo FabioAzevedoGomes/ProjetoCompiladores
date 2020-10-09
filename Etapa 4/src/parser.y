@@ -1,7 +1,7 @@
 %{
     #include <stdio.h>
     #include "symbol_table_management.h" // Methods for managing the Symbol Table
-    #include "tree.h"
+    #include "tree.h"                    // Methods for managing the AST
 
     // Function for getting tokens from input 
     int yylex(void);
@@ -635,11 +635,11 @@ operador_binario_baixa_prec:   '+'                   {$$ = create_lexical_node($
                              | '-'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador de subtracao
                              | '|'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador bitwise or
                              | '&'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador bitwise and
-                             | comparador_relacional {$$ = $1;}                          // Retorna o nodo do comparador relacional 
-                             | operador_logico       {$$ = $1;}                          // Retorna o nodo do operador logico
-                             | '?' expressao ':'     {/* TODO ainda n sei o que fazer aqui*/
-                                                      free_lexical_value($1, TYPE_NA);  // Libera a memoria usada para o delimitador interrogacao (?)
-                                                      free_lexical_value($3, TYPE_NA);} // Libera a memoria usada para o delimitador dois pontos (:)
+                             | comparador_relacional {$$ = $1;}                           // Retorna o nodo do comparador relacional 
+                             | operador_logico       {$$ = $1;}                           // Retorna o nodo do operador logico
+                             | '?' expressao ':'     {$$ = create_ternop($2);             // Cria o operador ternario parcialmente
+                                                      free_lexical_value($1, TYPE_NA);    // Libera a memoria usada para o delimitador interrogacao (?)
+                                                      free_lexical_value($3, TYPE_NA);}   // Libera a memoria usada para o delimitador dois pontos (:)
 ;
 
 /**

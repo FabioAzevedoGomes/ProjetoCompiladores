@@ -189,13 +189,11 @@ node_t *create_unop(node_t *operation, node_t *operand);
 node_t *create_binop(node_t *operation, node_t *lval, node_t *rval);
 
 /**
- * @brief Creates a node for a TERNARY OPERATION expression
- * @param condition       Node containing condition expression
+ * @brief Partially creates a node for a TERNOP statement. Node is completed when BINOP is created
  * @param true_statment   Node containing expression if condition is true
- * @param false_statement Node containing expression if condition is false
  * @return Pointer to the created node
  */
-node_t *create_ternop(node_t *condition, node_t *true_statement, node_t *false_statement);
+node_t *create_ternop(node_t *true_statement);
 
 /**
  * @brief Creates a node for a function declaraction

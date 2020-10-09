@@ -420,7 +420,7 @@ node_t *create_vector_access(node_t *identifier, node_t *index)
     if (index->type == TYPE_INT)
     {
         // Create node
-        vector_access_node = create_artificial_node(CAT_SPECIAL_CHARACTER, value, identifier->type, CMD_VECTOR_ACCESS, identifier->lexval->line);
+        vector_access_node = create_artificial_node(CAT_RESERVED, value, identifier->type, CMD_VECTOR_ACCESS, identifier->lexval->line);
 
         // Add identifier as first child
         vector_access_node = insert_child(vector_access_node, identifier);
@@ -585,53 +585,50 @@ node_t *create_binop(node_t *operation, node_t *lval, node_t *rval)
     // Create a node for the binary operation
     node_t *binop_node = NULL;
 
-    // Check if operand types are compatible
-    new_type = infer_type(lval->type, rval->type);
-
-    // Check if operation type is compatible
-    new_type = infer_type(operation->type, new_type);
-
-    // If they are
-    if (new_type != -1)
+    // If the operation is a ternary operator
+    if (operation->st_kind == CMD_TERNOP)
     {
-        // Insert lval as first child
-        binop_node = insert_child(operation, lval);
+        // TODO Check if condition type is bool compatible
+        // TODO Check if false statement type is compatible with true statement type
 
-        // Insert rval as second child
+        // Complete the children
+        binop_node = insert_child(operation, lval);
         binop_node = insert_child(binop_node, rval);
     }
+    else
+    {
+        // Check if operand types are compatible
+        new_type = infer_type(lval->type, rval->type);
 
+        // Check if operation type is compatible
+        new_type = infer_type(operation->type, new_type);
+
+        // If they are
+        if (new_type != -1)
+        {
+            // Insert lval as first child
+            binop_node = insert_child(operation, lval);
+
+            // Insert rval as second child
+            binop_node = insert_child(binop_node, rval);
+        }
+    }
     return binop_node;
 }
 
-node_t *create_ternop(node_t *condition, node_t *true_statement, node_t *false_statement)
+node_t *create_ternop(node_t *true_statement)
 {
-    LanguageType new_type; // New type for the ternary operation
-
     // Create a node for the ternary operator
     node_t *ternop_node = NULL;
 
     TokenValue value;
     value.name = ":?";
 
-    // Check if expression types are compatible
-    new_type = infer_type(true_statement->type, false_statement->type);
+    // Partially create the ternary operator node
+    ternop_node = create_artificial_node(CAT_RESERVED, value, true_statement->type, CMD_TERNOP, true_statement->lexval->line);
 
-    // If condition also has the right type
-    if (new_type != -1 && compatible_types(TYPE_BOOL, condition->type))
-    {
-        // Create node
-        ternop_node = create_artificial_node(CAT_SPECIAL_CHARACTER, value, new_type, CMD_TERNOP, condition->lexval->line);
-
-        // Add condition as first child
-        ternop_node = insert_child(ternop_node, condition);
-
-        // Add true statement as second child
-        ternop_node = insert_child(ternop_node, true_statement);
-
-        // Add false statemente as second child
-        ternop_node = insert_child(ternop_node, false_statement);
-    }
+    // Insert the true statement as first child
+    ternop_node = insert_child(ternop_node, true_statement);
 
     return ternop_node;
 }
