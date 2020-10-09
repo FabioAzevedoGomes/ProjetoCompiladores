@@ -1,7 +1,8 @@
 /* DEFINICOES */
 %{
-    #include "data_types.h"
-    #include "parser.tab.h"
+    #include "../include/types.h"  // lexical_value and type enums
+    #include "../include/tree.h"   // For node_t data type
+    #include "../include/parser.tab.h"
 
     /* Linha atual do scanner */
     int current_line = 1;
@@ -169,50 +170,49 @@ void atrib_lexico(int tipo)
     int i;
 
     // Aloca memoria para valor_lexico
-    yylval.valor_lexico = (valor_lexico_t*)malloc(sizeof(valor_lexico_t));
-    memset(yylval.valor_lexico, 0, sizeof(valor_lexico_t));
+    yylval.lexval = (lexical_value_t*)malloc(sizeof(lexical_value_t));
+    memset(yylval.lexval, 0, sizeof(lexical_value_t));
 
     // Preenche a linha na estrutura valor_lexico da variavel global yylval
-    yylval.valor_lexico->linha_ocorrencia = get_line_number();   // Linha de ocorrencia do token
+    yylval.lexval->line = get_line_number();   // Linha de ocorrencia do token
 
     // Preenche o tipo do token e seu valor na estrutura valor_lexico
-    // TODO Verificar se, apos completa e liberada a AST, a memoria usada pelos strdups e liberada corretamente
     switch(tipo)
     {
         // Literais
         case TK_LIT_CHAR:
             // Copia o caractere sem aspas simples
-            yylval.valor_lexico->valor.caractere = *(yytext+sizeof(char));
-            yylval.valor_lexico->tipo = LITERAL; // Atualiza o tipo
+            yylval.lexval->value.character = *(yytext+sizeof(char));
+            yylval.lexval->category = CAT_LITERAL; // Atualiza o tipo
             break;
         case TK_LIT_STRING:        
             // Remove aspas duplas da string antes de copiar
             for(x = 'a', i = 0; x != '\0'; i++)
                 x = yytext[i];
             yytext[i-2] = '\0';
-            yylval.valor_lexico->valor.string = strdup(yytext + 1);
-            yylval.valor_lexico->tipo = LITERAL; // Atualizao tipo
+            yylval.lexval->value.string = strdup(yytext + 1);
+            yylval.lexval->category = CAT_LITERAL; // Atualizao tipo
             break;
         case TK_LIT_INT:
-            yylval.valor_lexico->valor.inteiro = atoi(yytext);
-            yylval.valor_lexico->tipo = LITERAL; // Atualiza o tipo
+            yylval.lexval->value.integer = atoi(yytext);
+            yylval.lexval->category = CAT_LITERAL; // Atualiza o tipo
             break;
         case TK_LIT_FLOAT:
-            yylval.valor_lexico->valor.ponto_flutuante = atof(yytext);
-            yylval.valor_lexico->tipo = LITERAL; // Atualiza o tipo
+            yylval.lexval->value.floating = atof(yytext);
+            yylval.lexval->category = CAT_LITERAL; // Atualiza o tipo
             break;
         case TK_LIT_TRUE:
-            yylval.valor_lexico->valor.booleano = 1; // 1 para representar o booleano true
-            yylval.valor_lexico->tipo = LITERAL; // Atualiza o tipo
+            yylval.lexval->value.boolean = 1; // 1 para representar o booleano true
+            yylval.lexval->category = CAT_LITERAL; // Atualiza o tipo
             break;
         case TK_LIT_FALSE:
-            yylval.valor_lexico->valor.booleano = 0; // 0 para representar o booleano false
-            yylval.valor_lexico->tipo = LITERAL; // Atualiza o tipo
+            yylval.lexval->value.boolean = 0; // 0 para representar o booleano false
+            yylval.lexval->category = CAT_LITERAL; // Atualiza o tipo
             break;
         // Identificadores
         case TK_IDENTIFICADOR:
-            yylval.valor_lexico->valor.nome = strdup(yytext); // Copia o nome do identificador
-            yylval.valor_lexico->tipo = IDENTIFICADOR; // Atualiza o tipo
+            yylval.lexval->value.name = strdup(yytext); // Copia o nome do identificador
+            yylval.lexval->category = CAT_IDENTIFIER; // Atualiza o tipo
             break;
         // Operadores compostos
         case TK_OC_LE:
@@ -223,13 +223,13 @@ void atrib_lexico(int tipo)
         case TK_OC_OR:
         case TK_OC_SR:
         case TK_OC_SL:
-            yylval.valor_lexico->valor.nome = strdup(yytext); // Copia a cadeia de caracteres do operador
-            yylval.valor_lexico->tipo = OPERADOR_COMPOSTO; // Atualiza o tipo
+            yylval.lexval->value.name = strdup(yytext); // Copia a cadeia de caracteres do operador
+            yylval.lexval->category = CAT_COMPOSITE_OPERATOR; // Atualiza o tipo
             break;
         // Caracteres especiais
         default:
-            yylval.valor_lexico->valor.nome = strdup(yytext); // Copia o caractere
-            yylval.valor_lexico->tipo = CARACTERE_ESPECIAL; // Atualiza o tipo
+            yylval.lexval->value.name = strdup(yytext); // Copia o caractere
+            yylval.lexval->category = CAT_SPECIAL_CHARACTER; // Atualiza o tipo
             break;
 
     }
