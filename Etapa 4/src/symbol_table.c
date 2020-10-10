@@ -12,16 +12,21 @@ symbol_table_t *create_symbol_table()
 
 symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount, int arg_count, symbol_t *args)
 {
+    // Copy data from lexical value to a new struct
+    lexical_value_t *symbol_lexval = (lexical_value_t *)malloc(sizeof(lexical_value_t));
+    symbol_lexval->category = lv->category;
+    symbol_lexval->value.name = strdup(lv->value.name);
+    symbol_lexval->line = lv->line;
 
     // Create a new symbol data structure
     symbol_t *symbol = (symbol_t *)malloc(sizeof(symbol_t));
-    symbol->key = lv->value.name;
+    symbol->key = symbol_lexval->value.name;
     symbol->count = amount;
-    symbol->data = lv;
+    symbol->data = symbol_lexval;
     symbol->kind = kind;
     symbol->size = amount * type_size(type);
     symbol->type = type;
-    symbol->declaration_line = lv->line;
+    symbol->declaration_line = symbol_lexval->line;
     symbol->args = args; // TODO Maybe here some deconstruction is needed
     symbol->argument_count = arg_count;
 
@@ -137,9 +142,15 @@ void free_symbol_table(symbol_table_t *st)
         // Get reference to the next entry
         entry_aux = entry->next;
 
+        printf("I am going to free the entry for symbol %s\n", ((symbol_t *)(entry->data))->key);
+
         // Free current entry // FIXME If entry is a function the arguments are not freed
-        free(((symbol_t *)(entry->data))->key);
+        //free(((symbol_t *)(entry->data))->key);
+        free_lexical_value(((symbol_t *)(entry->data))->data, ((symbol_t *)(entry->data))->type);
         free(entry->data);
         free(entry);
     }
+
+    // And finally free the table handler
+    free(st);
 }

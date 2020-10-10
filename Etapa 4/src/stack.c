@@ -16,7 +16,6 @@ void stack_init()
     // Fill the entry with the first symbol table (global)
     stack->top->data = (void *)global_scope;
     stack->top->bot = NULL;
-
 }
 
 void push(void *data)
@@ -26,14 +25,17 @@ void push(void *data)
     new_entry->data = data;
     new_entry->bot = stack->top;
 
-    // Updates stack size
+    // Update stack top
+    stack->top = new_entry;
+
+    // Update stack size
     stack->size++;
 }
 
 void *pop()
 {
-    void *data = NULL; // Pointer for the retrieved data
-    entry_t *aux;      // Auxiliary pointer for stack updating
+    void *data = NULL;   // Pointer for the retrieved data
+    entry_t *aux = NULL; // Auxiliary pointer for stack updating
 
     // If there are entries in the stack
     if (stack->size > 0)
@@ -50,6 +52,15 @@ void *pop()
 
         // Updates stack size
         stack->size--;
+
+        // If that was the last scope (global)
+        if (stack->size == 0)
+        {
+            // Free stack handler
+            free(stack);
+            stack = NULL;
+
+        }
     }
 
     // Return popped data

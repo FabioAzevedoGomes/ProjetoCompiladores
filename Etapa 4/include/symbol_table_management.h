@@ -64,7 +64,7 @@ st_entry_t *make_symbol_entry(lexical_value_t *lexval, int count, SymbolKind kin
  * @param list         A list of symbol entries
  * @returns Pointer to the new list with the created symbol added
  */
-st_entry_t *make_symbol_list(st_entry_t* symbol_entry, st_entry_t *list);
+st_entry_t *make_symbol_list(st_entry_t *symbol_entry, st_entry_t *list);
 
 /**
  * @brief "Declares" a list of symbols with the given type, performing semantic checks for each one
@@ -72,5 +72,17 @@ st_entry_t *make_symbol_list(st_entry_t* symbol_entry, st_entry_t *list);
  * @param type The type these symbols should receive
  */
 void declare_symbol_list(st_entry_t *list, LanguageType type);
+
+// LOCAL SYMBOL LIST CREATION
+
+/**
+ * @brief Checks:
+ * - If initializing type is compatible with identifier type
+ * - If initializing value is an identifier, if it was declared previously
+ * Also updates the variable initialization nodes with the proper type
+ * @param vars List of initialized variables
+ * @param type The type begin assigned to the variables
+ */
+void check_init_types(node_t *vars, LanguageType type);
 
 #endif

@@ -12,6 +12,7 @@
 #include "stack.h"
 #include "types.h"
 #include "error_report.h"
+#include "tree.h" // For freeing lexical value
 
 // SYMBOL ENUMS
 
@@ -30,14 +31,14 @@ typedef enum SymbolKind
 /**
  * @brief Defines a symbol in the language
  */
-typedef struct symbol_entry
+typedef struct symbol_data
 {
     char *key; // Unique name for the symbol
 
     int declaration_line; // Line in the code where this symbol was declared
 
     int argument_count;        // Amount of arguments received, if this symbol is a function
-    struct symbol_entry *args; // Pointer to the first argument (if this is a function) or next argument (if this is an argument)
+    struct symbol_data *args; // Pointer to the first argument (if this is a function) or next argument (if this is an argument)
 
     LanguageType type; // Assigned type for the symbol
     SymbolKind kind;   // The nature of the symbol (string, function, id, vector, etc.)

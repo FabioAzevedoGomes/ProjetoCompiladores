@@ -33,7 +33,8 @@ void leave_scope()
     symbol_table_t *st = (symbol_table_t *)pop();
 
     // Free symbol table memory
-    free_symbol_table(st);
+    if (st != NULL)
+        free_symbol_table(st);
 }
 
 error_t *create_function_id(lexical_value_t *lv, LanguageType type, symbol_t *args, int register_args)
@@ -75,32 +76,6 @@ error_t *create_function_id(lexical_value_t *lv, LanguageType type, symbol_t *ar
             args_aux = args_aux->args;
         }
     }
-
-    // Return operation status
-    return status;
-}
-
-/**
- * @brief Creates an identifier for a variable in the current scope 
- * @param lv     Lexical value for this variable identifier
- * @param type   Language type for this variable
- * @param kind   Nature of the variable being created (string, id, vector, function, etc.)
- * @param amount How many of that type is being declared (For strings and vectors)
- * @returns A description of the error if any occurred, NULL otherwise
- */
-error_t *create_variable_id(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount)
-{
-    if (!initialized)
-        init();
-
-    error_t *status = NULL;  // Status of the current operation
-    symbol_t *symbol = NULL; // Symbol being created
-
-    // Try to create a variable symbol
-    symbol = create_symbol(lv, type, kind, amount, 0, NULL);
-
-    // Try to add that symbol to the current scope
-    status = insert_symbol((symbol_table_t *)(stack->top->data), symbol);
 
     // Return operation status
     return status;
@@ -238,5 +213,100 @@ void declare_symbol_list(st_entry_t *list, LanguageType type)
                 // TODO Maybe here stop execution? Not sure how this will work yet
             }
         }
+    }
+}
+
+void check_init_types(node_t *vars, LanguageType type)
+{
+    LanguageType new_type; // New type being assigned to the node
+
+    node_t *aux = NULL;     // Auxiliary pointer for traversing the list
+    error_t *status = NULL; // Operation status
+
+    node_t *identifier = NULL;  // Pointer to the node of the initialized variable
+    node_t *initializer = NULL; // Pointer to the node of the initializing value
+
+    if (vars != NULL)
+    {
+        // Get reference to next variable (3rd child)
+        //    '<='     id     init_val  next_var
+        aux = vars->children->brothers->brothers;
+
+        do
+        {
+            // Update pointers
+            identifier = vars->children;
+            initializer = vars->children->brothers;
+
+            // Update identifier node and initialization node type
+            vars->type = type;
+            identifier->type = type;
+
+            // If identifier is being initialized with another identifier
+            if (initializer->lexval->category == CAT_IDENTIFIER)
+            {
+                // Check if other identifier exists
+                status = find_id(initializer->lexval->value.name, 1);
+
+                // If symbol does not exist
+                if (status->error_type != 0)
+                {
+                    print_error(status); // TODO Maybe stop execution here, not sure
+                }
+                else
+                {
+                    // If symbol existed, update initializer node type
+                    initializer->type = ((symbol_t *)(status->data1))->type;
+
+                    // Free error status
+                    free(status);
+                    status = NULL;
+                }
+            }
+
+            // Check if types are compatible
+            if ((new_type = infer_type(identifier->type, initializer->type)) != -1)
+            {
+                // Update identifier and initialization node types
+                identifier->type = new_type;
+                vars->type = new_type;
+
+                // Get reference to the symbol
+                status = find_id(identifier->lexval->value.name, 1);
+
+                // Check return status
+                if (status->error_type == 0)
+                {
+                    // Update the symbol type in the stack
+                    ((symbol_t *)(status->data1))->type = new_type;
+                }
+                else
+                {
+                    // This should NEVER happen, as symbols are declared before this executes
+                    print_error(status);
+
+                }
+
+                free(status);
+            }
+            else
+            {
+                // Create wrong type error
+                status = create_error(ERR_WRONG_TYPE);
+                status->data1 = (void *)identifier;  // Variable being initialized
+                status->data1 = (void *)initializer; // Value used in initializtion
+
+                print_error(status);
+
+                // TODO Stop execution here? not sure
+            }
+
+            // Move to next node
+            vars = aux;
+
+            if (aux != NULL)
+                aux = aux->children->brothers->brothers;
+
+        } while (vars != NULL);
     }
 }

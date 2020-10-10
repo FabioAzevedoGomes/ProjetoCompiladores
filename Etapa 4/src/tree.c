@@ -67,7 +67,7 @@ void free_lexical_value(lexical_value_t *lexval, LanguageType type)
         switch (lexval->category)
         {
         case CAT_COMPOSITE_OPERATOR: // Composite operators such as &&
-        case CAT_IDENTIFIER:         // Identeifiers
+        case CAT_IDENTIFIER:         // Identifiers
         case CAT_SPECIAL_CHARACTER:  // Special characters such as '.' and ';'
 
             // Free lexval name
@@ -536,23 +536,14 @@ node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
 
 node_t *create_init(node_t *identifier, node_t *rval, node_t *operator)
 {
-    LanguageType new_type; // New type for the initialization
-
     // Create node for variable initialization
     node_t *init_node = NULL;
 
-    // Check if types are compatible
-    new_type = infer_type(identifier->type, rval->type);
+    // Add identifier as first child
+    init_node = insert_child(operator, identifier);
 
-    // If they are
-    if (new_type != -1)
-    {
-        // Add identifier as first child
-        init_node = insert_child(operator, identifier);
-
-        // Add rval as second child
-        init_node = insert_child(init_node, rval);
-    }
+    // Add rval as second child
+    init_node = insert_child(init_node, rval);
 
     return init_node;
 }

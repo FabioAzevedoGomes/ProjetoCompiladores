@@ -17,6 +17,9 @@
 
     // Pointer to a structure containing semantic error details
     error_t *error_data = NULL;
+
+    // Pointer to a list of local variables that are being declared and possibly initialized
+    st_entry_t* local_var_symbol_list = NULL;
 %}
 
 // Union for token lexical value
@@ -159,7 +162,7 @@
  * Uma declaracao de funcao, seguida de mais programa
  * Uma definicao de variavel, seguida de mais programa
  */
-programa:   /* empty */                 {$$ = NULL;}                                    // Nao cria nodo para vazio
+programa:   /* empty */                 {$$ = NULL; leave_scope();} // No final do programa, sai do escopo global, liberando a memoria da tabela de simbolos
           | declaracao_funcao programa  {$$ = create_command_chain($1,$2); arvore = $$;} // Insere o resto do programa como proximo da declaracao de funcao
           | var_global programa         {$$ = $2;}                                      // Ignora variaveis nao inicializadas
 ;
@@ -303,21 +306,22 @@ parametro: tipo_const TK_IDENTIFICADOR { } // TODO Insere simbolo na lista de pa
 
 // COMANDOS SIMPLES E BLOCOS DE COMANDOS
 
+// O inicio de um bloco de comandos inicia um novo escopo
+bloco_comandos_inicio: '{' {free_lexical_value($1, TYPE_NA); enter_scope();}
+;
+
+// O fim de um bloco de comandos fecha o escopo atual
+bloco_comandos_fim: '}' {free_lexical_value($1, TYPE_NA); leave_scope();}
+;
 
 /**
  * Um bloco de comandos pode ser:
  *
- * Vazio, sendo caracterizado apenas pelas chaves
+ * Vazio, sendo caracterizado apenas pelas chaves de inicio de e fim
  * Uma lista de comandos simples entre chaves
  */
-// TODO Exit scope here
-bloco_comandos:   '{' '}'                        {free_lexical_value($1, TYPE_NA); // Libera a memoria usada para o delimitador {
-                                                  free_lexical_value($2, TYPE_NA); // Libera a memoria usada para o delimitador }
-                                                  $$ = NULL;}                      // Nao contem nenhum comando
-                | '{' lista_comandos_simples '}' {free_lexical_value($1, TYPE_NA); // Libera a memoria usada para o delimitador {
-                                                  free_lexical_value($3, TYPE_NA); // Libera a memoria usada para o delimitador }
-                                                  $$ = $2;                         // O primeiro da lista e o primeiro do bloco
-                                                  }
+bloco_comandos:   bloco_comandos_inicio bloco_comandos_fim {$$ = NULL;} 
+                | bloco_comandos_inicio lista_comandos_simples bloco_comandos_fim {$$ = $2;}
 ;
 
 /** 
@@ -412,7 +416,10 @@ vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = create_vector_access(cr
  * Um tipo possivelmente const static, ...
  * ... seguido de uma lista de identificadores
  */
-var_local: tipo_const_estatico lista_identificadores_locais {$$ = $2;} // TODO Verifica e atualiza a tabela de simbolos com as novas variaveis declaradas 
+var_local: tipo_const_estatico lista_identificadores_locais {$$ = $2; 
+                                                             declare_symbol_list(local_var_symbol_list, $1); // Declara a lista de variaveis locais na tabela de simbolos
+                                                             check_init_types($2, $1);                       // Verifica os tipos daquelas variaveis que sao inicializadas
+                                                             local_var_symbol_list = NULL;}                  // Reseta a lista de vars locais (Memoria foi liberada na declaracao)
 ;
 
 /**
@@ -421,7 +428,7 @@ var_local: tipo_const_estatico lista_identificadores_locais {$$ = $2;} // TODO V
  * Um identificador local
  * Um identificador local, seguido de uma lista de identificadores locais, separados por virgula
  */
-lista_identificadores_locais:   identificador_local                                  {$$ = $1;} // TODO Insere na lista de inserção da tabela de simbolos ? talvez nao, n sei
+lista_identificadores_locais:   identificador_local                                  {$$ = $1;}
                               | identificador_local ',' lista_identificadores_locais {$$ = insert_child($1, $3);        // Insere na lista de variaveis sendo declaradas
                                                                                       free_lexical_value($2, TYPE_NA);} // Libera a memoria usada para o delimitador (;)
 ;
@@ -433,13 +440,17 @@ lista_identificadores_locais:   identificador_local                             
  * Um identificador simples inicializado com um literal
  * Um identificador simples inicializado com outro identificador simples
  */
-identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;} // TODO Insere na lista de inserção para a tabela de simbolos
-                     | TK_IDENTIFICADOR TK_OC_LE literal          {create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND),
+identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;
+                                                                   local_var_symbol_list = make_symbol_list(make_symbol_entry($1, 1, KIND_IDENTIFIER) ,local_var_symbol_list);
+                                                                   free_lexical_value($1, TYPE_NA);}
+                     | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND),
                                                                                $3,
-                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE));}
-                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND),
+                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE));
+                                                                   local_var_symbol_list = make_symbol_list(make_symbol_entry($1, 1, KIND_IDENTIFIER) ,local_var_symbol_list);}
+                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND),
                                                                                create_lexical_node($3, TYPE_TBA, CMD_OPERAND),
-                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE));}
+                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE));
+                                                                   local_var_symbol_list = make_symbol_list(make_symbol_entry($1, 1, KIND_IDENTIFIER) ,local_var_symbol_list);}
 ;
 
 /** Uma atribuicao pode ser:
