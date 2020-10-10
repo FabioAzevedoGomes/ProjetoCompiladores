@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern stack_t *stack;
-
 void init()
 {
     // Initializes the stack and global symbol table
@@ -82,6 +80,14 @@ error_t *create_function_id(lexical_value_t *lv, LanguageType type, symbol_t *ar
     return status;
 }
 
+/**
+ * @brief Creates an identifier for a variable in the current scope 
+ * @param lv     Lexical value for this variable identifier
+ * @param type   Language type for this variable
+ * @param kind   Nature of the variable being created (string, id, vector, function, etc.)
+ * @param amount How many of that type is being declared (For strings and vectors)
+ * @returns A description of the error if any occurred, NULL otherwise
+ */
 error_t *create_variable_id(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount)
 {
     if (!initialized)
@@ -148,4 +154,89 @@ error_t *find_id(char *key, int global)
 
     // Return operation status
     return status;
+}
+
+st_entry_t *make_symbol_entry(lexical_value_t *lexval, int count, SymbolKind kind)
+{
+    if (!initialized)
+        init();
+
+    // Create a new symbol with a To-Be-Assigned type
+    symbol_t *new_symbol = create_symbol(lexval, TYPE_TBA, kind, count, 0, NULL);
+
+    // Create an entry for this symbol
+    st_entry_t *new_entry = (st_entry_t *)malloc(sizeof(st_entry_t));
+    new_entry->data = new_symbol;
+    new_entry->next = NULL;
+
+    return new_entry;
+}
+
+st_entry_t *make_symbol_list(st_entry_t *symbol_entry, st_entry_t *list)
+{
+    if (!initialized)
+        init();
+
+    st_entry_t *aux = NULL; // Auxiliary pointer to traverse the list
+
+    if (list != NULL)
+    {
+        // Get reference to the second element in the list
+        aux = list;
+
+        // Traverse list
+        while (aux->next != NULL)
+        {
+            aux = aux->next;
+        }
+
+        // Insert new symbol entry at the end of the list
+        aux->next = symbol_entry;
+
+        // Return the list head pointer
+        return list;
+    }
+    else
+    {
+        // If list does not exist, symbol is the new head of the list
+        return symbol_entry;
+    }
+}
+
+void declare_symbol_list(st_entry_t *list, LanguageType type)
+{
+    if (!initialized)
+        init();
+
+    st_entry_t *aux = NULL; // Auxiliary pointer for traversing the list
+    error_t *status = NULL; // Operation status
+
+    if (list != NULL)
+    {
+        // Travese the entire list
+        for (aux = list; aux != NULL && status == NULL;)
+        {
+            // Try to insert symbol
+            if ((status = insert_symbol(((entry_t *)(stack->top))->data, aux->data)) == NULL)
+            {
+                // If insertion went ok
+
+                // Swap pointers
+                list = aux;
+                aux = aux->next;
+
+                // Free memory used for the entry in the list
+                free(list);
+            }
+            else
+            {
+                // If there was an error during insertion
+
+                // Print error information
+                print_error(status);
+
+                // TODO Maybe here stop execution? Not sure how this will work yet
+            }
+        }
+    }
 }

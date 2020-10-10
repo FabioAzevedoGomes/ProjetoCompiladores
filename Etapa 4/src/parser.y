@@ -23,7 +23,7 @@
 %union{
     node_t* node;            // Token node in the AST
     lexical_value_t* lexval; // Token lexical value
-    symbol_t* symbol;        // Token symbol in the Symbol Table
+    st_entry_t* symbol;      // Token symbol in the Symbol Table
     LanguageType type;       // Token type according to language definition
 }
 
@@ -79,76 +79,76 @@
 
 // Special characters are identified by their lexical value
 %token<lexval> ',' 
-';' 
-':' 
-'('
-')' 
-'[' 
-']' 
-'{'
-'}' 
-'+' 
-'-' 
-'|' 
-'*' 
-'/' 
-'<' 
-'>' 
-'=' 
-'!' 
-'&' 
-'%' 
-'#' 
-'^' 
-'.' 
-'$' 
-'?'
+%token<lexval> ';' 
+%token<lexval> ':' 
+%token<lexval> '('
+%token<lexval> ')' 
+%token<lexval> '[' 
+%token<lexval> ']' 
+%token<lexval> '{'
+%token<lexval> '}' 
+%token<lexval> '+' 
+%token<lexval> '-' 
+%token<lexval> '|' 
+%token<lexval> '*' 
+%token<lexval> '/' 
+%token<lexval> '<' 
+%token<lexval> '>' 
+%token<lexval> '=' 
+%token<lexval> '!' 
+%token<lexval> '&' 
+%token<lexval> '%' 
+%token<lexval> '#' 
+%token<lexval> '^' 
+%token<lexval> '.' 
+%token<lexval> '$' 
+%token<lexval> '?'
 
 // Initial grammar symbol
 %start programa
 
 %type <symbol> lista_identificadores_globais
-identificador_global
-lista_parametros
-parametro
-assinatura
+%type <symbol> identificador_global
+%type <symbol> lista_parametros
+%type <symbol> parametro
+%type <symbol> assinatura
 
 // Non-Terminal types
 %type <node> bloco_comandos 
-lista_comandos_simples 
-comando_es 
-comando_simples 
-var_local 
-argumento 
-lista_identificadores_locais 
-identificador_local 
-atribuicao 
-operador_shift 
-comando_shift 
-vetor_indexado 
-comando_if 
-comando_for 
-comando_while 
-controle_fluxo 
-termo 
-expressao 
-operador_logico 
-comparador_relacional 
-operador_binario_alta_prec 
-operador_binario_baixa_prec 
-chamada_funcao 
-operando 
-fator  
-declaracao_funcao 
-programa 
-operador_unario 
-literal
-lista_argumentos
+%type <node> lista_comandos_simples 
+%type <node> comando_es 
+%type <node> comando_simples 
+%type <node> var_local 
+%type <node> argumento 
+%type <node> lista_identificadores_locais 
+%type <node> identificador_local 
+%type <node> atribuicao 
+%type <node> operador_shift 
+%type <node> comando_shift 
+%type <node> vetor_indexado 
+%type <node> comando_if 
+%type <node> comando_for 
+%type <node> comando_while 
+%type <node> controle_fluxo 
+%type <node> termo 
+%type <node> expressao 
+%type <node> operador_logico 
+%type <node> comparador_relacional 
+%type <node> operador_binario_alta_prec 
+%type <node> operador_binario_baixa_prec 
+%type <node> chamada_funcao 
+%type <node> operando 
+%type <node> fator  
+%type <node> declaracao_funcao 
+%type <node> programa 
+%type <node> operador_unario 
+%type <node> literal
+%type <node> lista_argumentos
 
 %type<type> tipo
-tipo_estatico
-tipo_const
-tipo_const_estatico
+%type<type> tipo_estatico
+%type<type> tipo_const
+%type<type> tipo_const_estatico
 
 %%
 
@@ -221,8 +221,8 @@ tipo_const_estatico:   tipo                          {$$ = $1;} // Apenas um tip
  * ... seguido de uma lista de identificadores...
  * ... e terminado por ponto e virgula (;)
  */
-// TODO Inserir a lista de variaveis globais na tabela de simbolos do escopo global
-var_global: tipo_estatico lista_identificadores_globais ';' {free_lexical_value($3, TYPE_NA);} // Libera a memoria usada no delimitador ponto e virgula (;)
+var_global: tipo_estatico lista_identificadores_globais ';' {declare_symbol_list($2, $1);
+                                                             free_lexical_value($3, TYPE_NA);} // Libera a memoria usada no delimitador ponto e virgula (;)
 ;
 
 /**
@@ -231,9 +231,9 @@ var_global: tipo_estatico lista_identificadores_globais ';' {free_lexical_value(
  * Apenas um identificador
  * Um identificador, seguido de uma lista de identificadores, separados por virgula
  */
-// TODO Inserir o simbolo na lista de inserção de variaveis globais? n sei se aqui
 lista_identificadores_globais:   identificador_global                                   {$$ = $1;} // O simbolo e a propria lista
-                               | identificador_global ',' lista_identificadores_globais {free_lexical_value($2, TYPE_NA);} // Libera a memoria usada no delimitador virgula (,)
+                               | identificador_global ',' lista_identificadores_globais {make_symbol_list($1, $3);
+                                                                                         free_lexical_value($2, TYPE_NA);} // Libera a memoria usada no delimitador virgula (,)
 ; 
 
 /**
@@ -242,9 +242,10 @@ lista_identificadores_globais:   identificador_global                           
  * Um identificador simples
  * Um identificador indexado por um literal inteiro positivo
  */
-// TODO Inserir o simbolo na lista de inserção de variaveis globais
-identificador_global:   TK_IDENTIFICADOR                    {}
-                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {free_lexical_value($2, TYPE_NA);   // Libera a memoria usada para o delimitador colchete ([)
+identificador_global:   TK_IDENTIFICADOR                    {$$ = make_symbol_entry($1, 1, KIND_IDENTIFIER);}
+                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {$$ = make_symbol_entry($1, $3->value.integer, KIND_IDENTIFIER);
+                                                             free_lexical_value($2, TYPE_NA);   // Libera a memoria usada para o delimitador colchete ([)
+                                                             free_lexical_value($3, TYPE_NA);   // Libera a memoria usada para o inteiro usado no tamanho
                                                              free_lexical_value($4, TYPE_NA);}  // Libera a memoria usada para o delimitador colchete (])
 ;
 
@@ -309,7 +310,7 @@ parametro: tipo_const TK_IDENTIFICADOR { } // TODO Insere simbolo na lista de pa
  * Vazio, sendo caracterizado apenas pelas chaves
  * Uma lista de comandos simples entre chaves
  */
-// TODO Enter a new scope when a command block STARTS
+// TODO Exit scope here
 bloco_comandos:   '{' '}'                        {free_lexical_value($1, TYPE_NA); // Libera a memoria usada para o delimitador {
                                                   free_lexical_value($2, TYPE_NA); // Libera a memoria usada para o delimitador }
                                                   $$ = NULL;}                      // Nao contem nenhum comando
@@ -584,7 +585,7 @@ fator:   '(' expressao ')' {$$ = $2;                          // Retorna o nodo 
  * Um literal FALSE
  * Um operador unario aplicado a um fator
  */
-operando:   TK_IDENTIFICADOR       {$$ = create_lexical_node($1, TYPE_TBA, CMD_OPERAND);} // TODO Verificar o tipo desse identificador na tabela de simbolos e atualizar aqui
+operando:   TK_IDENTIFICADOR       {$$ = create_lexical_node($1, TYPE_TBA, CMD_OPERAND);}   // Cria um nodo para o identificador
           | vetor_indexado         {$$ = $1;}                
           | TK_LIT_INT             {$$ = create_lexical_node($1, TYPE_INT,   CMD_OPERAND);} // Cria um nodo para o literal inteiro
           | TK_LIT_FLOAT           {$$ = create_lexical_node($1, TYPE_FLOAT, CMD_OPERAND);} // Cria um nodo para o literal float

@@ -1,10 +1,7 @@
 #include "symbol_table.h"
 
-extern stack_t *stack;
-
 symbol_table_t *create_symbol_table()
 {
-
     // Allocate memory for a new (empty) symbol table
     symbol_table_t *new_symbol_table = (symbol_table_t *)malloc(sizeof(symbol_table_t));
     new_symbol_table->size = 0;
@@ -35,6 +32,11 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
 {
     error_t *status = NULL; // Operation status
 
+    // Entry for the new symbol
+    st_entry_t *new_entry = (st_entry_t *)malloc(sizeof(st_entry_t));
+    new_entry->next = NULL;
+    new_entry->data = (void *)symbol;
+
     st_entry_t *entry = NULL;     // An entry in the symbol table
     st_entry_t *entry_aux = NULL; // Auxiliary pointer for the symbol table
 
@@ -43,34 +45,45 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
     {
         // Get reference to first symbol in the list
         entry = st->first;
+        entry_aux = entry;
 
-        // Searches the entire table for this symbol
-        for (int i = 0; i < st->size; i++, entry = entry->next)
+        if (entry != NULL)
         {
-            // If the symbol exists
-            if (!strcmp(((symbol_t *)(entry->data))->key, symbol->key))
+            do
             {
-                // Create "Already declared" error
-                status = create_error(ERR_DECLARED);
+                // If the symbol exists
+                if (!strcmp(((symbol_t *)(entry->data))->key, symbol->key))
+                {
+                    // Create "Already declared" error
+                    status = create_error(ERR_DECLARED);
 
-                // Include data about the error
-                status->data1 = (void *)symbol; // Current declaration
-                status->data2 = entry->data;    // Previous declaration
+                    // Include data about the error
+                    status->data1 = (void *)symbol; // Current declaration
+                    status->data2 = entry->data;    // Previous declaration
+                }
+
+                // Update pointer
+                entry_aux = entry;
+                entry = entry->next;
+
+            } while (entry != NULL);
+
+            // If reached the end without any errors
+            if (status == NULL)
+            {
+                // Insert new symbol
+                entry_aux->next = new_entry;
+
+                // Update symbol table counter
+                st->size++;
             }
         }
-
-        // If reached the end without any errors
-        if (status == NULL)
+        else
         {
-            // Prepare table entry
-            entry_aux = (st_entry_t *)malloc(sizeof(st_entry_t));
-            entry_aux->next = NULL;
-            entry_aux->data = (void *)symbol;
+            // If there were no entries, new entry is the new first
+            st->first = new_entry;
 
-            // Insert new symbol
-            entry->next = entry_aux;
-
-            // Update symbol table coutner
+            // Update symbol table counter
             st->size++;
         }
     }

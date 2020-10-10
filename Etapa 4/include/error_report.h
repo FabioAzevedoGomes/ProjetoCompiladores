@@ -28,4 +28,10 @@ typedef struct error_return_format
  */
 error_t *create_error(int type);
 
+/**
+ * @brief Prints information about a semantic error to stdout
+ * @param error The error description
+ */
+void print_error(error_t *error);
+
 #endif

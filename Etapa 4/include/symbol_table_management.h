@@ -12,6 +12,8 @@
 // Whether the global scope has been initialized
 static int initialized = 0;
 
+// TABLE ACCESS
+
 /**
  * Initializes the stack and the global scope 
  */
@@ -38,21 +40,37 @@ void leave_scope();
 error_t *create_function_id(lexical_value_t *lv, LanguageType type, symbol_t *args, int register_args);
 
 /**
- * @brief Creates an identifier for a variable in the current scope 
- * @param lv     Lexical value for this variable identifier
- * @param type   Language type for this variable
- * @param kind   Nature of the variable being created (string, id, vector, function, etc.)
- * @param amount How many of that type is being declared (For strings and vectors)
- * @returns A description of the error if any occurred, NULL otherwise
- */
-error_t *create_variable_id(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount);
-
-/**
  * @brief Finds an identifier in the specified scope
  * @param key    Key for the identifier being searched for
  * @param global Whether this search should be in a local or global scope
  * @returns A description of the error, if error->type is 0 then data1 contains the symbol information
  */
 error_t *find_id(char *key, int global);
+
+// SYMBOL LIST CREATION
+
+/**
+ * @brief Creates a list of symbols that are going to be typed and declared in the current scope
+ * @param lexval The lexical value of the new symbol being created
+ * @param count  The amount of that symbol being created (For vectors)
+ * @param kind   The kind of the symbol being created (Identifier or vector)
+ * @returns Pointer to the new list with the created symbol added
+ */
+st_entry_t *make_symbol_entry(lexical_value_t *lexval, int count, SymbolKind kind);
+
+/**
+ * @brief Creates a list of symbols that are going to be typed and declared in the current scope
+ * @param symbol_entry A symbol entry that should be typed and added to symbol table
+ * @param list         A list of symbol entries
+ * @returns Pointer to the new list with the created symbol added
+ */
+st_entry_t *make_symbol_list(st_entry_t* symbol_entry, st_entry_t *list);
+
+/**
+ * @brief "Declares" a list of symbols with the given type, performing semantic checks for each one
+ * @param list A list of symbol entries that are being declared
+ * @param type The type these symbols should receive
+ */
+void declare_symbol_list(st_entry_t *list, LanguageType type);
 
 #endif

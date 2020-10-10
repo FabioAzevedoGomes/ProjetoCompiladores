@@ -13,3 +13,8 @@ error_t *create_error(int type)
     // Return pointer to created structure
     return error;
 }
+
+void print_error(error_t *error)
+{
+    printf(" (print_error) DUMMY, NOT YET IMPLEMENTED\n");
+}

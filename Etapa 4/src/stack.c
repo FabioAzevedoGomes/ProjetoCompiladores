@@ -1,17 +1,22 @@
 #include "stack.h"
 
-stack_t *stack = NULL;
-
 void stack_init()
 {
+    // Create symbol table for global scope
+    symbol_table_t *global_scope = create_symbol_table();
+
+    // Create stack entry
+    entry_t *stack_entry = (entry_t *)malloc(sizeof(entry_t));
+
     // Create a new stack with a single entry
     stack = (stack_t *)malloc(sizeof(stack_t));
     stack->size = 1;
-    stack->top = (entry_t *)malloc(sizeof(entry_t *));
+    stack->top = stack_entry;
 
     // Fill the entry with the first symbol table (global)
-    stack->top->data = (void *)create_symbol_table();
+    stack->top->data = (void *)global_scope;
     stack->top->bot = NULL;
+
 }
 
 void push(void *data)
