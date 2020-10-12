@@ -10,7 +10,7 @@ symbol_table_t *create_symbol_table()
     return new_symbol_table;
 }
 
-symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount, int arg_count, symbol_t *args)
+symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount, int arg_count, st_entry_t *args)
 {
     // Copy data from lexical value to a new struct
     lexical_value_t *symbol_lexval = (lexical_value_t *)malloc(sizeof(lexical_value_t));
@@ -27,7 +27,7 @@ symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind,
     symbol->size = amount * type_size(type);
     symbol->type = type;
     symbol->declaration_line = symbol_lexval->line;
-    symbol->args = args; // TODO Maybe here some deconstruction is needed
+    symbol->args = args;
     symbol->argument_count = arg_count;
 
     return symbol;
@@ -97,10 +97,11 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
     return status;
 }
 
-symbol_t *retrieve_symbol(symbol_table_t *st, char *key)
+symbol_t *retrieve_symbol(symbol_table_t *st, char *key, int f_par)
 {
     symbol_t *symbol = NULL;  // Symbol being retrieved
     st_entry_t *entry = NULL; // An entry in the symbol table
+    st_entry_t *aux = NULL;   // Auxiliary pointer for traversing parameters of functions
 
     // Only retrieve from symbol tables that exist
     if (st != NULL)
@@ -119,9 +120,32 @@ symbol_t *retrieve_symbol(symbol_table_t *st, char *key)
             }
             else
             {
-                // If not, move on to next entry
-                entry = entry->next;
+                // If not, check if it is a function and it's parameters should be searched as well
+                if (f_par == 1 && ((symbol_t *)(entry->data))->kind == KIND_FUNCTION)
+                {
+                    // If so, get first parameter reference
+                    aux = ((symbol_t *)(entry->data))->args;
+
+                    // Traverse parameter list
+                    while (aux != NULL && symbol == NULL)
+                    {
+                        // If this parameter matches searched symbol
+                        if (!strcmp(key, ((symbol_t *)(aux->data))->key))
+                        {
+                            // Update retrieved symbol
+                            symbol = (symbol_t *)(aux->data);
+                        }
+                        else
+                        {
+                            // If not move on to next parameter
+                            aux = aux->next;
+                        }
+                    }
+                }
             }
+
+            // Move on to next symbol
+            entry = entry->next;
         }
     }
 
@@ -134,6 +158,10 @@ void free_symbol_table(symbol_table_t *st)
     st_entry_t *entry;     // An entry in the symbol table
     st_entry_t *entry_aux; // Auxiliary pointer for iterating symbol table
 
+    // Auxiliary pointers for iterating parameter list
+    st_entry_t *param_aux;
+    st_entry_t *param_aux_next;
+
     // Get reference to the first symbol entry
     entry = st->first;
 
@@ -142,10 +170,33 @@ void free_symbol_table(symbol_table_t *st)
         // Get reference to the next entry
         entry_aux = entry->next;
 
-        printf("I am going to free the entry for symbol %s\n", ((symbol_t *)(entry->data))->key);
+        // If entry is a function
+        if (((symbol_t *)(entry->data))->kind == KIND_FUNCTION)
+        {
 
-        // Free current entry // FIXME If entry is a function the arguments are not freed
-        //free(((symbol_t *)(entry->data))->key);
+            // Get reference to first param arguments
+            param_aux = ((symbol_t *)(entry->data))->args;
+
+            // Iterate param list
+            while (param_aux != NULL)
+            {
+
+                // Free symbol data
+                free_lexical_value(((symbol_t *)(param_aux->data))->data, ((symbol_t *)(param_aux->data))->type);
+                free((symbol_t *)(param_aux->data));
+
+                // Get next parameter
+                param_aux_next = param_aux->next;
+
+                // Free entry
+                free(param_aux);
+
+                // Move to next parameter
+                param_aux = param_aux_next;
+            }
+        }
+
+        // Free current entry
         free_lexical_value(((symbol_t *)(entry->data))->data, ((symbol_t *)(entry->data))->type);
         free(entry->data);
         free(entry);
@@ -153,4 +204,49 @@ void free_symbol_table(symbol_table_t *st)
 
     // And finally free the table handler
     free(st);
+}
+
+void print_symbol_table(symbol_table_t *st)
+{
+
+    st_entry_t *aux = st->first;
+    st_entry_t *par_aux = NULL;
+
+    // Iterate symbol table
+    while (aux != NULL)
+    {
+        // Print symbol info
+        print_symbol((symbol_t *)(aux->data));
+
+        // If it is a function, print arguments as well
+        if (((symbol_t *)(aux->data))->kind == KIND_FUNCTION)
+        {
+            printf("Arguments:\n");
+            par_aux = ((symbol_t *)(aux->data))->args;
+
+            // Print all parameters
+            while (par_aux != NULL)
+            {
+                // Print param info
+                print_symbol((symbol_t *)(par_aux->data));
+
+                // Move to next parameter
+                par_aux = par_aux->next;
+            }
+        }
+
+        // Move to next entry
+        aux = aux->next;
+    }
+}
+
+void print_symbol(symbol_t *symbol)
+{
+    printf("========================\n");
+    printf("Symbol key: %s\n", symbol->key);
+    printf("Symbol type: %d\n", symbol->type);
+    printf("Declared on line: %d\n", symbol->declaration_line);
+    printf("Symbol kind: %d\n", symbol->kind);
+    printf("Symbol argument count: %d\n", symbol->argument_count);
+    printf("========================\n");
 }

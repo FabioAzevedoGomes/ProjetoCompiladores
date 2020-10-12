@@ -4,7 +4,7 @@ SRC := src/
 DOC := doc/
 
 all: stack.o error_report.o st_management.o symbol_table.o tree.o types.o parser.tab.c lex.yy.c
-	gcc -c ${SRC}main.c -o ${OBJ}main.o
+	gcc -c ${SRC}main.c -o ${OBJ}main.o	-Wall
 	gcc -c ${INC}parser.tab.c -o ${OBJ}parser.tab.o
 	gcc -c ${SRC}lex.yy.c -o ${OBJ}lex.yy.o
 	gcc -o etapa4 ${OBJ}main.o ${OBJ}types.o ${OBJ}stack.o ${OBJ}error_report.o ${OBJ}symbol_table_management.o ${OBJ}symbol_table.o ${OBJ}tree.o ${OBJ}lex.yy.o ${OBJ}parser.tab.o -lfl -Wall

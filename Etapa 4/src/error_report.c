@@ -17,4 +17,6 @@ error_t *create_error(int type)
 void print_error(error_t *error)
 {
     printf(" (print_error) DUMMY, NOT YET IMPLEMENTED\n");
+
+    exit(error->error_type);
 }

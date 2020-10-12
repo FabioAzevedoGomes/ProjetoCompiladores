@@ -34,51 +34,12 @@ void leave_scope()
 
     // Free symbol table memory
     if (st != NULL)
+    {
+        printf("Leaving scope with symbol table: \n");
+        print_symbol_table(st);
+
         free_symbol_table(st);
-}
-
-error_t *create_function_id(lexical_value_t *lv, LanguageType type, symbol_t *args, int register_args)
-{
-    if (!initialized)
-        init();
-
-    error_t *status = NULL;    // Status of the current operation
-    symbol_t *symbol = NULL;   // Symbol being created
-    symbol_t *args_aux = args; // Auxiliary pointer for counting function arguments
-    int arg_count = 0;
-
-    // Count amount of arguments in the function
-    while (args_aux != NULL)
-    {
-        arg_count++;
-        args_aux = args_aux->args;
     }
-
-    // Create a symbol for the function identifier
-    symbol = create_symbol(lv, type, KIND_FUNCTION, 1, arg_count, args);
-
-    // Try to insert that symbol in the symbol table
-    status = insert_symbol((symbol_table_t *)(stack->top->data), symbol);
-
-    // If no error occured and arguments should be registered as well
-    if (status == NULL && register_args)
-    {
-        // Get first argument
-        args_aux = args;
-
-        // Iterate arguments trying to insert in the symbol table
-        while (args_aux != NULL && status == NULL)
-        {
-            // Try to insert argument
-            status = insert_symbol((symbol_table_t *)(stack->top->data), args_aux);
-
-            // Get next argument
-            args_aux = args_aux->args;
-        }
-    }
-
-    // Return operation status
-    return status;
 }
 
 error_t *find_id(char *key, int global)
@@ -92,7 +53,7 @@ error_t *find_id(char *key, int global)
     entry_t *entry; // A data entry in the stack
 
     // Try to get the symbol in the local scope
-    if ((symbol = retrieve_symbol((symbol_table_t *)(stack->top->data), key)) != NULL)
+    if ((symbol = retrieve_symbol((symbol_table_t *)(stack->top->data), key, 0)) != NULL)
     {
         // If symbol was found, fill status with the symbol data
         status->error_type = 0;
@@ -110,7 +71,7 @@ error_t *find_id(char *key, int global)
             for (int i = 1; i < stack->size && (status->error_type == -1); i++, entry = entry->bot)
             {
                 // If symbol was found
-                if ((symbol = retrieve_symbol((symbol_table_t *)(entry->data), key)) != NULL)
+                if ((symbol = retrieve_symbol((symbol_table_t *)(entry->data), key, 0)) != NULL)
                 {
                     // Update status
                     status->error_type = 0;
@@ -284,7 +245,6 @@ void check_init_types(node_t *vars, LanguageType type)
                 {
                     // This should NEVER happen, as symbols are declared before this executes
                     print_error(status);
-
                 }
 
                 free(status);
@@ -308,5 +268,144 @@ void check_init_types(node_t *vars, LanguageType type)
                 aux = aux->children->brothers->brothers;
 
         } while (vars != NULL);
+    }
+}
+
+st_entry_t *make_function_entry(lexical_value_t *lexval, LanguageType type)
+{
+    if (!initialized)
+        init();
+
+    // Create a new symbol for the function, with no arguments
+    symbol_t *new_symbol = create_symbol(lexval, type, KIND_FUNCTION, 1, 0, NULL);
+
+    // Create an entry for this symbol
+    st_entry_t *new_entry = (st_entry_t *)malloc(sizeof(st_entry_t));
+    new_entry->data = new_symbol;
+    new_entry->next = NULL;
+
+    return new_entry;
+}
+
+st_entry_t *make_param_entry(lexical_value_t *param, LanguageType type)
+{
+    if (!initialized)
+        init();
+
+    // Allocate memory for the param symbol
+    symbol_t *new_symbol = create_symbol(param, type, KIND_IDENTIFIER, 1, 0, NULL);
+
+    // Allocate memory for the parameter being created
+    st_entry_t *new_param = (st_entry_t *)malloc(sizeof(st_entry_t));
+    new_param->data = new_symbol;
+    new_param->next = NULL;
+
+    return new_param;
+}
+
+st_entry_t *make_param_list(st_entry_t *param, st_entry_t *list)
+{
+    if (!initialized)
+        init();
+
+    st_entry_t *aux = NULL; // Auxiliary pointer to traverse the list
+
+    if (list != NULL)
+    {
+        // Get reference to the first element in the list
+        aux = list;
+
+        // Traverse list
+        while (aux->next != NULL)
+        {
+            aux = aux->next;
+        }
+
+        // Insert new param entry at the end of the list
+        aux->next = param;
+
+        // Update the argument pointer chain
+        ((symbol_t *)(aux->data))->args = param;
+
+        // Update argument count
+        ((symbol_t *)(list->data))->argument_count++;
+
+        // Return the list head pointer
+        return list;
+    }
+    else
+    {
+        if (param != NULL)
+        {
+            // If list was null param is the new list
+            ((symbol_t *)(param->data))->argument_count = 1;
+        }
+        return param;
+    }
+}
+
+st_entry_t *declare_function(st_entry_t *function, st_entry_t *params, int global)
+{
+    if (!initialized)
+        init();
+
+    symbol_t *function_symbol = NULL; // Symbol for the new function
+    error_t *status = NULL;           // Status of the current operation
+
+    if (function != NULL && function->data != NULL)
+    {
+        // Get function symbol reference
+        function_symbol = ((symbol_t *)(function->data));
+
+        // Insert parameters as function param
+        function_symbol->args = params;
+
+        // If there are parameters, get argument count
+        if (params != NULL && params->data != NULL)
+            function_symbol->argument_count = ((symbol_t *)(params->data))->argument_count + 1;
+
+        if ((status = insert_symbol(((entry_t *)(stack->top))->data, function_symbol)) != NULL)
+        {
+            print_error(status);
+
+            // TODO Exit?
+        }
+    }
+
+    // Return created function entry in the symbol table
+    return function;
+}
+
+void declare_params(st_entry_t *params)
+{
+    if (!initialized)
+        init();
+
+    st_entry_t *aux = NULL; // Auxiliary pointer for traversing the parameter list
+    error_t *status = NULL; // Status of the current operation
+    symbol_t *param = NULL; // The parameter being inserted
+
+    // Get reference to first parameter
+    aux = params;
+
+    while (aux != NULL)
+    {
+        // Copy data from the parameter symbol
+        param = create_symbol(((symbol_t *)(aux->data))->data,
+                              ((symbol_t *)(aux->data))->type,
+                              ((symbol_t *)(aux->data))->kind,
+                              ((symbol_t *)(aux->data))->count,
+                              ((symbol_t *)(aux->data))->argument_count,
+                              ((symbol_t *)(aux->data))->args);
+
+        // Try to insert parameter
+        if ((status = insert_symbol(((entry_t *)(stack->top))->data, param)) != NULL)
+        {
+            // This should never happen, unless 2 parameters in the function declaration have the same name
+            print_error(status);
+        }
+
+        // Move to next parameter
+        aux = aux->next;
     }
 }

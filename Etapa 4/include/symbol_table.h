@@ -29,6 +29,16 @@ typedef enum SymbolKind
 // SYMBOL TABLE DATA TYPES
 
 /**
+ * @brief Defines an entry in the symbol table 
+ */
+typedef struct symbol_table_entry
+{
+    void *data;                      // Data stored in this entry
+    struct symbol_table_entry *next; // Pointer to the next entry
+
+} st_entry_t;
+
+/**
  * @brief Defines a symbol in the language
  */
 typedef struct symbol_data
@@ -37,8 +47,8 @@ typedef struct symbol_data
 
     int declaration_line; // Line in the code where this symbol was declared
 
-    int argument_count;        // Amount of arguments received, if this symbol is a function
-    struct symbol_data *args; // Pointer to the first argument (if this is a function) or next argument (if this is an argument)
+    int argument_count; // Amount of arguments received, if this symbol is a function
+    st_entry_t *args;   // Pointer to the first argument (if this is a function) or next argument (if this is an argument)
 
     LanguageType type; // Assigned type for the symbol
     SymbolKind kind;   // The nature of the symbol (string, function, id, vector, etc.)
@@ -49,16 +59,6 @@ typedef struct symbol_data
     lexical_value_t *data; // Data for this symbol
 
 } symbol_t;
-
-/**
- * @brief Defines an entry in the symbol table 
- */
-typedef struct symbol_table_entry
-{
-    void *data;                      // Data stored in this entry
-    struct symbol_table_entry *next; // Pointer to the next entry
-
-} st_entry_t;
 
 /**
  * @brief Defines the handler for a symbol table 
@@ -88,7 +88,7 @@ symbol_table_t *create_symbol_table();
  * @param args      Pointer to the first argument received by this symbol, if it is a function
  * @returns The created symbol 
  */
-symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount, int arg_count, symbol_t *args);
+symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind, int amount, int arg_count, st_entry_t *args);
 
 /**
  * @brief Inserts a new symbol into a symbol table
@@ -100,15 +100,28 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol);
 
 /**
  * @brief Retrieves the symbol corresponding to KEY
- * @param table Symbol table where the symbol is being retrieved from
+ * @param st    Symbol table where the symbol is being retrieved from
  * @param key   The key for the symbol
+ * @param f_par Whether the function parameters should also be considered
  * @returns The symbol associated with that key, NULL otherwise 
  */
-symbol_t *retrieve_symbol(symbol_table_t *st, char *key);
+symbol_t *retrieve_symbol(symbol_table_t *st, char *key, int f_par);
 
 /**
  * Frees the memory used by a symbol table 
  */
 void free_symbol_table(symbol_table_t *st);
+
+/**
+ * Prints every element fo the given symbol table 
+ * @param st Symbol table
+ */
+void print_symbol_table(symbol_table_t *st);
+
+/**
+ * @brief Prints symbol information
+ * @param symbol Symbol being printed 
+ */
+void print_symbol(symbol_t* symbol);
 
 #endif

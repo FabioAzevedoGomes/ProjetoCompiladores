@@ -19,7 +19,12 @@
     error_t *error_data = NULL;
 
     // Pointer to a list of local variables that are being declared and possibly initialized
-    st_entry_t* local_var_symbol_list = NULL;
+    st_entry_t *local_var_symbol_list = NULL;
+
+    // Pointer to the entry for the current function, NULL if global.
+    st_entry_t *current_function = NULL;
+    
+    st_entry_t *param_list = NULL;
 %}
 
 // Union for token lexical value
@@ -143,6 +148,7 @@
 %type <node> operando 
 %type <node> fator  
 %type <node> declaracao_funcao 
+%type <node> definicao_funcao
 %type <node> programa 
 %type <node> operador_unario 
 %type <node> literal
@@ -245,8 +251,10 @@ lista_identificadores_globais:   identificador_global                           
  * Um identificador simples
  * Um identificador indexado por um literal inteiro positivo
  */
-identificador_global:   TK_IDENTIFICADOR                    {$$ = make_symbol_entry($1, 1, KIND_IDENTIFIER);}
+identificador_global:   TK_IDENTIFICADOR                    {$$ = make_symbol_entry($1, 1, KIND_IDENTIFIER);
+                                                             free_lexical_value($1, TYPE_NA);}
                       | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {$$ = make_symbol_entry($1, $3->value.integer, KIND_IDENTIFIER);
+                                                             free_lexical_value($1, TYPE_NA);
                                                              free_lexical_value($2, TYPE_NA);   // Libera a memoria usada para o delimitador colchete ([)
                                                              free_lexical_value($3, TYPE_NA);   // Libera a memoria usada para o inteiro usado no tamanho
                                                              free_lexical_value($4, TYPE_NA);}  // Libera a memoria usada para o delimitador colchete (])
@@ -255,16 +263,23 @@ identificador_global:   TK_IDENTIFICADOR                    {$$ = make_symbol_en
 
 // DECLARACAO DE FUNCOES
 
+/**
+ * Uma definicao de funcao e:
+ * Um tipo estatico de retorno...
+ * ...seguido pelo nome da funcao e sua assinatura
+ */
+definicao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura {$$ = create_lexical_node($2, $1, CMD_FUNCTION_DECLARATION);
+                                                             current_function = declare_function(make_function_entry($2, $1), $3, 1);}// Declara a funcao na tabela de simbolos global
+                                                            
+;
 
 /**
  * Uma declaracao de funcao e:
  *
- * Um tipo estatico de retorno...
- * ...seguido pelo nome da funcao e sua assinatura ...
+ * A definicao da sua assinatura ...
  * ... terminada por um bloco de comandos
  */ 
-// TODO Insere na tabela de simbolos global E na tabela de simbolos do proprio escopo da funcao
-declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ = create_function_declaration(create_lexical_node($2, $1, CMD_FUNCTION_DECLARATION), $4, $1);} 
+declaracao_funcao: definicao_funcao bloco_comandos { $$ = create_function_declaration($1, $2, $1->type);} 
 ;
 
 /**
@@ -273,7 +288,6 @@ declaracao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura bloco_comandos {$$ 
  * Vazia, caracterizada apenas pelos parenteses
  * Um ou mais parametros entre parenteses
  */
-// TODO Insere a lista de parametros na declaracao da funcao (Talvez seja aqui que se inicia um escopo novo para funcoes)
 assinatura:   '(' ')'                    {$$ = NULL;
                                           free_lexical_value($1, TYPE_NA);  // Libera a memoria usada para o delimitador parenteses (
                                           free_lexical_value($2, TYPE_NA);} // Libera a memoria usada para o delimitador parenteses )
@@ -289,7 +303,8 @@ assinatura:   '(' ')'                    {$$ = NULL;
  * Um parametro, seguido de uma lista de parametros separados por virugla (,)
  */
 lista_parametros:   parametro                      {$$ = $1;}
-                  | parametro ',' lista_parametros {free_lexical_value($2, TYPE_NA);} // TODO Insere simbolo na lista de parametros de funcao ? n sei se aqui
+                  | parametro ',' lista_parametros {$$ = make_param_list($1, $3);
+                                                    free_lexical_value($2, TYPE_NA);}
 ;
 
 /**
@@ -300,18 +315,32 @@ lista_parametros:   parametro                      {$$ = $1;}
  *
  * OBS.: Nao pode ser vetor
  */
-parametro: tipo_const TK_IDENTIFICADOR { } // TODO Insere simbolo na lista de parametros de funcao
+parametro: tipo_const TK_IDENTIFICADOR {$$ = make_param_entry($2, $1); 
+                                        free_lexical_value($2, $1);}
 ;
 
 
 // COMANDOS SIMPLES E BLOCOS DE COMANDOS
 
 // O inicio de um bloco de comandos inicia um novo escopo
-bloco_comandos_inicio: '{' {free_lexical_value($1, TYPE_NA); enter_scope();}
+bloco_comandos_inicio: '{' {free_lexical_value($1, TYPE_NA);
+                            enter_scope(); // Entra em um novo escopo
+                            if (current_function != NULL)// Se entrou em uma funcao
+                            {
+                                // Declara os parametros da funcao no escopo local
+                                declare_params(((symbol_t *)(current_function->data))->args);
+                            }}
 ;
 
 // O fim de um bloco de comandos fecha o escopo atual
-bloco_comandos_fim: '}' {free_lexical_value($1, TYPE_NA); leave_scope();}
+bloco_comandos_fim: '}' {free_lexical_value($1, TYPE_NA); 
+                         leave_scope();                // Sai do escopo do bloco de comandos
+                         if (current_function != NULL) // Se saiu de uma funcao
+                         {
+                            // Reseta o ponteiro para a funcao atual
+                            free(current_function);
+                            current_function = NULL;
+                         }}
 ;
 
 /**

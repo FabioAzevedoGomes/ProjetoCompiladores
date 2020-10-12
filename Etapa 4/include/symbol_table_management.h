@@ -30,16 +30,6 @@ void enter_scope();
 void leave_scope();
 
 /**
- * @brief Creates an identifier for a function in the current scope
- * @param lv            Lexical value of the function identifier
- * @param type          The return type for the function
- * @param args          Pointer to the symbols for the arguments the function takes
- * @param register_args Whether to register arguments in the symbol table as well or not
- * @returns A description of the error if any occurred, NULL otherwise 
- */
-error_t *create_function_id(lexical_value_t *lv, LanguageType type, symbol_t *args, int register_args);
-
-/**
  * @brief Finds an identifier in the specified scope
  * @param key    Key for the identifier being searched for
  * @param global Whether this search should be in a local or global scope
@@ -73,7 +63,7 @@ st_entry_t *make_symbol_list(st_entry_t *symbol_entry, st_entry_t *list);
  */
 void declare_symbol_list(st_entry_t *list, LanguageType type);
 
-// LOCAL SYMBOL LIST CREATION
+// LOCAL SYMBOL LIST TYPE CHECKING
 
 /**
  * @brief Checks:
@@ -84,5 +74,46 @@ void declare_symbol_list(st_entry_t *list, LanguageType type);
  * @param type The type begin assigned to the variables
  */
 void check_init_types(node_t *vars, LanguageType type);
+
+// FUNCTION DECLARATION
+
+/**
+ * @brief Creates a symbol table entry for a function 
+ * @param lexval    Lexical value of the function ID
+ * @param type      Return type of the function
+ * @param arg_count Number of arguments the function receives
+ */
+st_entry_t *make_function_entry(lexical_value_t *lexval, LanguageType type);
+
+/**
+ * @brief Creates an entry for a function parameter
+ * @param param Lexical value of the parameter being used
+ * @param type  Type of this parameter
+ * @returns Pointer to the created symbol table entry
+ */
+st_entry_t *make_param_entry(lexical_value_t *param, LanguageType type);
+
+/**
+ * @brief Creates a list using a given parameter and an already existing param list
+ * @param param Symbol table entry for the new parameter
+ * @param list  List of parameters
+ * @returns Pointer to the new parameter list
+ */
+st_entry_t *make_param_list(st_entry_t *param, st_entry_t *list);
+
+/**
+ * @brief Declares a function in the symbol table
+ * @param function Pointer to the function being declared
+ * @param params Pointer to the list of parameters of this fucntion
+ * @param global Whether this is a global declaration, i.e., whether to declare params in the symbol table as well
+ * @returns Pointer to the declared function, so it may be kept track of by the parser
+ */
+st_entry_t *declare_function(st_entry_t *function, st_entry_t *params, int global);
+
+/**
+ * @brief Declares a list of parameters to the current scope 
+ * @param params List of parameters
+ */
+void declare_params(st_entry_t *params);
 
 #endif
