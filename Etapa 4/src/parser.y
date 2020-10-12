@@ -338,7 +338,7 @@ bloco_comandos_fim: '}' {free_lexical_value($1, TYPE_NA);
                          if (current_function != NULL) // Se saiu de uma funcao
                          {
                             // Reseta o ponteiro para a funcao atual
-                            free(current_function);
+                            free(current_function); 
                             current_function = NULL;
                          }}
 ;

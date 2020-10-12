@@ -152,6 +152,9 @@ void declare_symbol_list(st_entry_t *list, LanguageType type)
         // Travese the entire list
         for (aux = list; aux != NULL && status == NULL;)
         {
+            // Update symbol type
+            ((symbol_t*)(aux->data))->type = type;
+
             // Try to insert symbol
             if ((status = insert_symbol(((entry_t *)(stack->top))->data, aux->data)) == NULL)
             {
