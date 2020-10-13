@@ -12,63 +12,6 @@
 #include "stack.h"
 #include "types.h"
 #include "error_report.h"
-#include "tree.h" // For freeing lexical value
-
-// SYMBOL ENUMS
-
-// Different kinds of symbol that can be present in the symbol table
-typedef enum SymbolKind
-{
-    KIND_IDENTIFIER, // The symbol is a simple identifier
-    KIND_VECTOR,     // The symbol is a vector
-    KIND_FUNCTION,   // The symbol is a function
-    KIND_NONE        // The symbol has no applicable nature
-
-} SymbolKind;
-
-// SYMBOL TABLE DATA TYPES
-
-/**
- * @brief Defines an entry in the symbol table 
- */
-typedef struct symbol_table_entry
-{
-    void *data;                      // Data stored in this entry
-    struct symbol_table_entry *next; // Pointer to the next entry
-
-} st_entry_t;
-
-/**
- * @brief Defines a symbol in the language
- */
-typedef struct symbol_data
-{
-    char *key; // Unique name for the symbol
-
-    int declaration_line; // Line in the code where this symbol was declared
-
-    int argument_count; // Amount of arguments received, if this symbol is a function
-    st_entry_t *args;   // Pointer to the first argument (if this is a function) or next argument (if this is an argument)
-
-    LanguageType type; // Assigned type for the symbol
-    SymbolKind kind;   // The nature of the symbol (string, function, id, vector, etc.)
-
-    int size;  // Occupied space for the symbol
-    int count; // Amount of that type is being stored (For vectors and strings)
-
-    lexical_value_t *data; // Data for this symbol
-
-} symbol_t;
-
-/**
- * @brief Defines the handler for a symbol table 
- */
-typedef struct symbol_table_handler
-{
-    int size;          // Number of entries in the symbol table
-    st_entry_t *first; // First entry in the symbol table
-
-} symbol_table_t;
 
 // SYMBOL TABLE METHODS
 

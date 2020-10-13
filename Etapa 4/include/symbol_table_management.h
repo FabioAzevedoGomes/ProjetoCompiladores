@@ -8,11 +8,11 @@
 
 #include "symbol_table.h"
 #include "stack.h"
-
-// Whether the global scope has been initialized
-static int initialized = 0;
+#include "types.h"
 
 // TABLE ACCESS
+
+st_entry_t *current_function; // Pointer to current function being analyzed
 
 /**
  * Initializes the stack and the global scope 

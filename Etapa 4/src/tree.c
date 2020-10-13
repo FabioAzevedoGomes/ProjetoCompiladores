@@ -60,35 +60,6 @@ void free_node(void *root)
     }
 }
 
-void free_lexical_value(lexical_value_t *lexval, LanguageType type)
-{
-    if (lexval != NULL)
-    {
-        switch (lexval->category)
-        {
-        case CAT_COMPOSITE_OPERATOR: // Composite operators such as &&
-        case CAT_IDENTIFIER:         // Identifiers
-        case CAT_SPECIAL_CHARACTER:  // Special characters such as '.' and ';'
-
-            // Free lexval name
-            free(lexval->value.name);
-            break;
-        case CAT_LITERAL: // Literal values
-
-            // If it is a string, free strduped value
-            if (type == TYPE_STRING)
-                free(lexval->value.string);
-
-            break;
-        default:
-            break;
-        }
-
-        // And finally free lexval
-        free(lexval);
-    }
-}
-
 extern void libera(void *arvore)
 {
     // Remove all nodes from the AST recursively
@@ -237,15 +208,38 @@ extern void exporta(void *arvore)
 
 // GENERAL NODE METHODS
 
-node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statement st_kind)
+node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statement st_kind, int declare)
 {
+    error_t *status = NULL; // Current operation status
+
     // Allocate memory for node
     node_t *new_node = (node_t *)malloc(sizeof(node_t));
 
     // Initialize lexical value, statement kind and language type
     new_node->lexval = lexval;
     new_node->st_kind = st_kind;
-    new_node->type = type;
+
+    // If this is an ID that is not being declared
+    if (!declare && st_kind == CMD_OPERAND && type == TYPE_TBA)
+    {
+        // Search symbol table for it's type
+        status = find_id(lexval->value.name, 1);
+
+        // If symbol was not found
+        if (status->error_type != 0)
+        {
+            // Print error info and exit
+            print_error(status);
+        }
+
+        // Update type
+        new_node->type = ((symbol_t *)(status->data1))->type;
+    }
+    else
+    {
+        // If not, just uupdate type
+        new_node->type = type;
+    }
 
     // On creation, node is completly disconnected from the tree
     new_node->brothers = NULL;
@@ -325,30 +319,93 @@ node_t *create_artificial_node(TokenCategory category, TokenValue value, Languag
     lexval->category = category;
 
     // Creates a new node using this lexval
-    return create_lexical_node(lexval, type, st_kind);
+    return create_lexical_node(lexval, type, st_kind, 1);
 }
 
 // STATEMENT NODE CREATION METHODS
 
 node_t *create_if(node_t *condition, node_t *true_statement, node_t *false_statement)
 {
+    error_t *status = NULL; // Current operation status
+    symbol_t *symbol = NULL;
+
     // Create new node for IF statement
     node_t *if_node = NULL;
 
     TokenValue value;
     value.name = "if";
 
-    // Check if condition type is compatible
-    if (compatible_types(TYPE_BOOL, condition->type))
+    // Create node
+    if_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_IF, condition->lexval->line);
+
+    // Add condition statement as first child
+    if_node = insert_child(if_node, condition);
+
+    // Add true statement as second child
+    if_node = insert_child(if_node, true_statement);
+
+    // Add false statement as third child (If it is null nothing is added)
+    if_node = insert_child(if_node, false_statement);
+
+    // If condition is a variable
+    if (condition->lexval->category == CAT_IDENTIFIER)
     {
-        // Create node
-        if_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_IF, condition->lexval->line);
+        // Get identifier
+        status = find_id(condition->lexval->value.name, 1);
 
-        // Add true statement as first child
-        if_node = insert_child(if_node, true_statement);
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
 
-        // Add false statement as third child (If it is null nothing is added)
-        if_node = insert_child(if_node, false_statement);
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)if_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Check if condition type is compatible
+    if (!compatible_types(TYPE_BOOL, condition->type))
+    {
+        // If type is not compatible with bool, it is string or char
+        if (condition->type == TYPE_CHAR)
+        {
+            // Create error
+            status = create_error(ERR_CHAR_TO_X);
+        }
+        else if (condition->type == TYPE_STRING)
+        {
+            // Create error
+            status = create_error(ERR_STRING_TO_X);
+        }
+        else
+        {
+            // Unknown type being used in expression
+            status = create_error(-1);
+        }
+
+        // Fill error data
+        status->data1 = (void *)if_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
     }
 
     return if_node;
@@ -358,27 +415,86 @@ node_t *create_for(node_t *init_atrib, node_t *condition, node_t *loop_atrib, no
 {
     // Create new node for FOR statement
     node_t *for_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     TokenValue value;
     value.name = "for";
 
-    // Check if types are correct
-    if (compatible_types(TYPE_BOOL, condition->type))
+    // Create node
+    for_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_FOR, init_atrib->lexval->line);
+
+    // Add initial attribution as first child
+    for_node = insert_child(for_node, init_atrib);
+
+    // Add stop condition as second child
+    for_node = insert_child(for_node, condition);
+
+    // Add loop attribution as third child
+    for_node = insert_child(for_node, loop_atrib);
+
+    // Add loop statement as fourth child
+    for_node = insert_child(for_node, statement);
+
+    // If condition is a variable
+    if (condition->lexval->category == CAT_IDENTIFIER)
     {
-        // Create node
-        for_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_FOR, init_atrib->lexval->line);
+        // Get identifier
+        status = find_id(condition->lexval->value.name, 1);
 
-        // Add initial attribution as first child
-        for_node = insert_child(for_node, init_atrib);
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
 
-        // Add stop condition as second child
-        for_node = insert_child(for_node, condition);
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
 
-        // Add loop attribution as third child
-        for_node = insert_child(for_node, loop_atrib);
+        // Free container
+        free(status);
+        status = NULL;
 
-        // Add loop statement as fourth child
-        for_node = insert_child(for_node, statement);
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)for_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Check if types are correct
+    if (!compatible_types(TYPE_BOOL, condition->type))
+    {
+        // If type is not compatible with bool, it is string or char
+        if (condition->type == TYPE_CHAR)
+        {
+            // Create error
+            status = create_error(ERR_CHAR_TO_X);
+        }
+        else if (condition->type == TYPE_STRING)
+        {
+            // Create error
+            status = create_error(ERR_STRING_TO_X);
+        }
+        else
+        {
+            // Unknown type being used in expression
+            status = create_error(-1);
+        }
+
+        // Fill error data
+        status->data1 = (void *)for_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
     }
 
     return for_node;
@@ -388,21 +504,80 @@ node_t *create_while(node_t *condition, node_t *statement)
 {
     // Create node for WHILE statement
     node_t *while_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     TokenValue value;
     value.name = "while";
 
-    // Check if condition type is compatible
-    if (compatible_types(TYPE_BOOL, condition->type))
+    // Create node
+    while_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_WHILE, condition->lexval->line);
+
+    // Insert condition as first child
+    while_node = insert_child(while_node, condition);
+
+    // Insert statement as second child
+    while_node = insert_child(while_node, statement);
+
+    // If condition is a variable
+    if (condition->lexval->category == CAT_IDENTIFIER)
     {
-        // Create node
-        while_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_WHILE, condition->lexval->line);
+        // Get identifier
+        status = find_id(condition->lexval->value.name, 1);
 
-        // Insert condition as first child
-        while_node = insert_child(while_node, condition);
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
 
-        // Insert statement as second child
-        while_node = insert_child(while_node, statement);
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)while_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Check if condition type is compatible
+    if (!compatible_types(TYPE_BOOL, condition->type))
+    {
+        // If type is not compatible with bool, it is string or char
+        if (condition->type == TYPE_CHAR)
+        {
+            // Create error
+            status = create_error(ERR_CHAR_TO_X);
+        }
+        else if (condition->type == TYPE_STRING)
+        {
+            // Create error
+            status = create_error(ERR_STRING_TO_X);
+        }
+        else
+        {
+            // Unknown type being used in expression
+            status = create_error(-1);
+        }
+
+        // Fill error data
+        status->data1 = (void *)while_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
     }
 
     return while_node;
@@ -412,21 +587,70 @@ node_t *create_vector_access(node_t *identifier, node_t *index)
 {
     // Create new node for vector access
     node_t *vector_access_node = NULL;
+    error_t *status = NULL;
+    error_t *error = NULL;
 
     TokenValue value;
     value.name = "[]";
 
-    // Check if indexing expression type is correct
-    if (index->type == TYPE_INT)
+    // Create node
+    vector_access_node = create_artificial_node(CAT_RESERVED, value, identifier->type, CMD_VECTOR_ACCESS, identifier->lexval->line);
+
+    // Add identifier as first child
+    vector_access_node = insert_child(vector_access_node, identifier);
+
+    // Add indexing expression as second node
+    vector_access_node = insert_child(vector_access_node, index);
+
+    // Update vector node type to the identifier type
+    vector_access_node->type = identifier->type;
+
+    // Get indexed identifier data
+    status = find_id(identifier->lexval->value.name, 1);
+
+    // Check if indexed id exists (redundant)
+    if (status->error_type != 0)
+        print_error(status);
+
+    // Check if indexed id is a vector
+    if (((symbol_t *)(status->data1))->kind != KIND_VECTOR)
     {
-        // Create node
-        vector_access_node = create_artificial_node(CAT_RESERVED, value, identifier->type, CMD_VECTOR_ACCESS, identifier->lexval->line);
+        // Create error
+        error = create_error(((symbol_t *)(status->data1))->kind == KIND_IDENTIFIER ? ERR_VARIABLE : ERR_FUNCTION);
 
-        // Add identifier as first child
-        vector_access_node = insert_child(vector_access_node, identifier);
+        // Fill data
+        error->data1 = status->data1;      // Symbol being used incorrectly
+        error->data2 = (void *)identifier; // Node for symbol usage
 
-        // Add indexing expression as second node
-        vector_access_node = insert_child(vector_access_node, index);
+        // Print error and exit
+        print_error(error);
+    }
+
+    // Check if indexing expression type is correct
+    if (!compatible_types(TYPE_INT, index->type))
+    {
+        // If type is not compatible with bool, it is string or char
+        if (index->type == TYPE_CHAR)
+        {
+            // Create error
+            status = create_error(ERR_CHAR_TO_X);
+        }
+        else if (index->type == TYPE_STRING)
+        {
+            // Create error
+            status = create_error(ERR_STRING_TO_X);
+        }
+        else
+        {
+            // Unknown type being used in expression
+            status = create_error(-1);
+        }
+
+        // Fill error data
+        status->data1 = (void *)vector_access_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
     }
 
     return vector_access_node;
@@ -436,28 +660,131 @@ node_t *create_input(node_t *identifier)
 {
     // Create a node for "input"
     node_t *input_node = NULL;
+    error_t *status = NULL;
+    error_t *error = NULL;
 
     TokenValue value;
     value.name = "input";
 
+    // Create node
     input_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_IO, identifier->lexval->line);
 
+    // Insert identifier as first child
+    input_node = insert_child(input_node, identifier);
+
+    // Get identifier data
+    status = find_id(identifier->lexval->value.name, 1);
+
+    // Check if indexed id exists (redundant)
+    if (status->error_type != 0)
+        print_error(status);
+
+    // Check if indexed id is a variable
+    if (((symbol_t *)(status->data1))->kind != KIND_IDENTIFIER)
+    {
+        // Create error
+        error = create_error(ERR_WRONG_PAR_INPUT);
+
+        // Fill data
+        error->data1 = status->data1;      // Symbol being used incorrectly
+        error->data2 = (void *)input_node; // Node for symbol usage
+
+        // Print error and exit
+        print_error(error);
+    }
+
+    // If identifier has the wrong type
+    if (identifier->type != TYPE_INT && identifier->type != TYPE_FLOAT)
+    {
+        // Create error
+        error = create_error(ERR_WRONG_PAR_INPUT);
+
+        // Fill error data
+        error->data1 = status->data1;
+        error->data2 = (void *)input_node;
+
+        // Print error and exit
+        print_error(error);
+    }
+
     // Add the identifier as only child
-    return insert_child(input_node, identifier);
+    return input_node;
 }
 
 node_t *create_output(node_t *operand)
 {
     // Create a node for "output"
     node_t *output_node = NULL;
+    error_t *status = NULL;
+    symbol_t *op_symbol = NULL;
+    symbol_t *symbol = NULL;
 
     TokenValue value;
     value.name = "output";
 
+    // Create node
     output_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_IO, operand->lexval->line);
 
+    // Insert operand as only child
+    output_node = insert_child(output_node, operand);
+
+    // If operand is a variable
+    if (operand->lexval->category == CAT_IDENTIFIER)
+    {
+        // Check if it exists
+        status = find_id(operand->lexval->value.name, 1);
+
+        // If not found
+        if (status->error_type != 0)
+        {
+            // Print error and exit
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = (symbol_t *)(status->data1);
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)output_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+
+        // Keep reference to symbol
+        op_symbol = (symbol_t *)(status->data1);
+
+        // Free error container
+        free(status);
+    }
+
+    // If identifier has the wrong type
+    if (operand->type != TYPE_INT && operand->type != TYPE_FLOAT)
+    {
+        // Create error
+        status = create_error(ERR_WRONG_PAR_INPUT);
+
+        // Fill error data
+        status->data1 = op_symbol;           // Symbol entry (Or NULL if it is a literal)
+        status->data2 = (void *)output_node; // Usage that caused the error
+
+        // Print error and exit
+        print_error(status);
+    }
+
     // Add the operand as the only child
-    return insert_child(output_node, operand);
+    return output_node;
 }
 
 node_t *create_continue(int line)
@@ -484,20 +811,81 @@ node_t *create_return(node_t *retval)
 {
     // Creates a node for "return" command
     node_t *return_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     TokenValue value;
     value.name = "return";
 
+    // Create node
     return_node = create_artificial_node(CAT_RESERVED, value, TYPE_NA, CMD_RETURN, retval->lexval->line);
 
-    // Insert return expression as the only child
-    return insert_child(return_node, retval);
+    // Insert return value as only child
+    return_node = insert_child(return_node, retval);
+
+    // Check if retval is an identifier
+    if (retval->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(retval->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)return_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Check if inside a function (redundant, should always be inside the function)
+    if (current_function != NULL)
+    {
+        // Check if return type is compatible with function type
+        if (!compatible_types(((symbol_t *)(current_function->data))->type, retval->type))
+        {
+            // Create error
+            status = create_error(ERR_WRONG_PAR_RETURN);
+
+            // Fill error data
+            status->data1 = current_function->data; // Declaration of function
+            status->data2 = (void *)return_node;    // Usage that caused the error
+            // TODO Maybe here add more data, like expected type
+
+            // Print error and exit
+            print_error(status);
+        }
+    }
+
+    // Return return node
+    return return_node;
 }
 
 node_t *create_shift(node_t *identifier, node_t *amount, node_t *operator)
 {
     // Creates a node for the shift operation
     node_t *shift_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     // Adds the identifier as first child
     shift_node = insert_child(operator, identifier);
@@ -508,27 +896,149 @@ node_t *create_shift(node_t *identifier, node_t *amount, node_t *operator)
     // Update shift type to operand type
     shift_node->type = identifier->type;
 
+    // Check if id is an identifier
+    if (identifier->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(identifier->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)shift_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Check if shift operand has the correct size
+    if (amount->lexval->value.integer > 16)
+    {
+        // Create error
+        status = create_error(ERR_WRONG_PAR_SHIFT);
+
+        // Fill error data
+        status->data1 = (void *)shift_node; // Incorrect usage that generated the error
+
+        // Print error and exit
+        print_error(status);
+    }
+
     return shift_node;
 }
 
 node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
 {
-    LanguageType new_type; // New type for the attribution
-
     // Create a node for the attribution operation
     node_t *attrib_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
-    // Check for type compatibility
-    new_type = infer_type(lval->type, rval->type);
+    // Add lval as first child
+    attrib_node = insert_child(operator, lval);
 
-    // If compatible
-    if (new_type != -1)
+    // Add rval as second child
+    attrib_node = insert_child(attrib_node, rval);
+
+    // Update attribution type (The identifier type prevails)
+    attrib_node->type = lval->type;
+
+    // Check if rval is an identifier
+    if (rval->lexval->category == CAT_IDENTIFIER)
     {
-        // Add lval as first child
-        attrib_node = insert_child(operator, lval);
+        // Get identifier
+        status = find_id(rval->lexval->value.name, 1);
 
-        // Add rval as second child
-        attrib_node = insert_child(attrib_node, rval);
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)attrib_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Check if lval is an identifier
+    if (lval->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(lval->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)attrib_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // If types are not compatible
+    if (!compatible_types(lval->type, rval->type))
+    {
+        // Create error
+        status = create_error(ERR_WRONG_TYPE);
+
+        // Fill error data
+        status->data1 = (void *)attrib_node;
+        // TODO Maybe here add more error data
     }
 
     return attrib_node;
@@ -538,12 +1048,65 @@ node_t *create_init(node_t *identifier, node_t *rval, node_t *operator)
 {
     // Create node for variable initialization
     node_t *init_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     // Add identifier as first child
     init_node = insert_child(operator, identifier);
 
     // Add rval as second child
     init_node = insert_child(init_node, rval);
+
+    // Update initialization type (Identifier type prevails)
+    init_node->type = identifier->type;
+
+    // If operator is an identifier
+    if (operator->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(operator->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)init_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // If types are not compatbile
+    if (!compatible_types(init_node->type, rval->type))
+    {
+        // Create error
+        status = create_error(ERR_WRONG_TYPE);
+
+        // Fill error data
+        status->data1 = (void *)init_node;
+        // TODO Maybe here add more error data?
+
+        // Print error and exit
+        print_error(status);
+    }
 
     return init_node;
 }
@@ -554,15 +1117,77 @@ node_t *create_unop(node_t *operation, node_t *operand)
 
     // Create a new node for the unary operator
     node_t *unop_node = NULL;
+    symbol_t *symbol = NULL;
+    error_t *status = NULL;
 
-    // Check for type compatibility
+    // Check for new expression type
     new_type = infer_type(operation->type, operand->type);
 
-    // If types are compatible
-    if (new_type != -1)
+    // Insert operand as the only child
+    unop_node = insert_child(operation, operand);
+
+    // Check if operand is an ID
+    if (operand->lexval->category == CAT_IDENTIFIER)
     {
-        // Insert operand as the only child
-        unop_node = insert_child(operation, operand);
+        // Get identifier
+        status = find_id(operand->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)unop_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // Update unop node type
+    unop_node->type = new_type;
+
+    // If types are not compatible
+    if (new_type == -1)
+    {
+        // It is string or char
+        if (operand->type == TYPE_CHAR)
+        {
+            // Create error
+            status = create_error(ERR_CHAR_TO_X);
+        }
+        else if (operand->type == TYPE_STRING)
+        {
+            // Create error
+            status = create_error(ERR_STRING_TO_X);
+        }
+        else
+        {
+            // Unknown type being used in expression
+            status = create_error(-1);
+        }
+
+        // Fill error data
+        status->data1 = (void *)unop_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
     }
 
     return unop_node;
@@ -570,40 +1195,206 @@ node_t *create_unop(node_t *operation, node_t *operand)
 
 node_t *create_binop(node_t *operation, node_t *lval, node_t *rval)
 {
-
     LanguageType new_type; // New type for the binary operation
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     // Create a node for the binary operation
     node_t *binop_node = NULL;
 
+    // Complete the children
+    binop_node = insert_child(operation, lval);
+    binop_node = insert_child(binop_node, rval);
+
+    // If lval is an ID
+    if (lval->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(lval->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)binop_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
+    // if rval is an IF
+    if (rval->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(rval->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)binop_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
+
     // If the operation is a ternary operator
     if (operation->st_kind == CMD_TERNOP)
     {
-        // TODO Check if condition type is bool compatible
-        // TODO Check if false statement type is compatible with true statement type
+        // If condition is not bool compatible
+        if (!compatible_types(TYPE_BOOL, lval->type))
+        {
+            // It is string or char
+            if (lval->type == TYPE_CHAR)
+            {
+                // Create error
+                status = create_error(ERR_CHAR_TO_X);
+            }
+            else if (lval->type == TYPE_STRING)
+            {
+                // Create error
+                status = create_error(ERR_STRING_TO_X);
+            }
+            else
+            {
+                // Unknown type being used in expression
+                status = create_error(-1);
+            }
 
-        // Complete the children
-        binop_node = insert_child(operation, lval);
-        binop_node = insert_child(binop_node, rval);
+            // Fill error data
+            status->data1 = (void *)binop_node; // Incorrect usage that generated the error
+
+            // Output error and exit
+            print_error(status);
+        }
+
+        // If false statement is not compatible with true statement
+        if ((new_type = infer_type(operation->children->type, rval->type)) == -1)
+        {
+            // TODO What error is output here?
+            status = create_error(-1);
+
+            // Output error and exit
+            print_error(status);
+        }
+
+        // Update node type
+        binop_node->type = new_type;
     }
     else
     {
-        // Check if operand types are compatible
-        new_type = infer_type(lval->type, rval->type);
+        // Check if operand types are compatible with operation
+        new_type = infer_type(lval->type, operation->type);
+
+        // If they are not compatible
+        if (new_type == -1)
+        {
+            // It is string or char
+            if (lval->type == TYPE_CHAR)
+            {
+                // Create error
+                status = create_error(ERR_CHAR_TO_X);
+            }
+            else if (lval->type == TYPE_STRING)
+            {
+                // Create error
+                status = create_error(ERR_STRING_TO_X);
+            }
+            else
+            {
+                // Unknown type being used in expression
+                status = create_error(-1);
+            }
+
+            // Fill error data
+            status->data1 = (void *)binop_node; // Incorrect usage that generated the error
+
+            // Output error and exit
+            print_error(status);
+        }
 
         // Check if operation type is compatible
-        new_type = infer_type(operation->type, new_type);
+        new_type = infer_type(rval->type, operation->type);
 
-        // If they are
-        if (new_type != -1)
+        if (new_type == -1)
         {
-            // Insert lval as first child
-            binop_node = insert_child(operation, lval);
+            // It is string or char
+            if (rval->type == TYPE_CHAR)
+            {
+                // Create error
+                status = create_error(ERR_CHAR_TO_X);
+            }
+            else if (rval->type == TYPE_STRING)
+            {
+                // Create error
+                status = create_error(ERR_STRING_TO_X);
+            }
+            else
+            {
+                // Unknown type being used in expression
+                status = create_error(-1);
+            }
 
-            // Insert rval as second child
-            binop_node = insert_child(binop_node, rval);
+            // Fill error data
+            status->data1 = (void *)binop_node; // Incorrect usage that generated the error
+
+            // Output error and exit
+            print_error(status);
         }
+
+        // If any operand is string, both have to be string
+        if ((lval->type == TYPE_STRING || rval->type == TYPE_STRING) && lval->type != rval->type)
+        {
+            // Create error
+            status = create_error(ERR_STRING_TO_X);
+
+            // Fill error data
+            status->data1 = binop_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+
+        // Update binop node type
+        binop_node->type = infer_type(lval->type, rval->type);
     }
+
     return binop_node;
 }
 
@@ -611,6 +1402,8 @@ node_t *create_ternop(node_t *true_statement)
 {
     // Create a node for the ternary operator
     node_t *ternop_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
 
     TokenValue value;
     value.name = ":?";
@@ -620,6 +1413,40 @@ node_t *create_ternop(node_t *true_statement)
 
     // Insert the true statement as first child
     ternop_node = insert_child(ternop_node, true_statement);
+
+    // If the statement is an identifier
+    if (true_statement->lexval->category == CAT_IDENTIFIER)
+    {
+        // Get identifier
+        status = find_id(true_statement->lexval->value.name, 1);
+
+        // Check if it exists (redundant)
+        if (status->error_type != 0)
+        {
+            print_error(status);
+        }
+
+        // Get reference to symbol
+        symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Check for correct usage
+        if (symbol->kind != KIND_IDENTIFIER)
+        {
+            // Create error
+            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+            // Fill error data
+            status->data1 = (void *)symbol;
+            status->data2 = (void *)ternop_node;
+
+            // Output error and exit
+            print_error(status);
+        }
+    }
 
     return ternop_node;
 }
@@ -640,18 +1467,264 @@ node_t *create_function_declaration(node_t *identifier, node_t *body, LanguageTy
 
 node_t *create_function_call(node_t *identifier, node_t *args)
 {
-    LanguageType new_type = TYPE_TBA; // New type for the function call
-
     // Create node for function call
     node_t *function_call_node = NULL;
+    error_t *status = NULL;
+    symbol_t *symbol = NULL;
+    symbol_t *par_symbol = NULL;
 
-    // TODO Check for argument, identifier and return typings in symbol table, update node type with fucntion return type
-
-    // Update function return type
-    identifier->type = new_type;
+    st_entry_t *aux_param = NULL; // Auxiliary pointer for traversing function parameters
+    node_t *aux_args = NULL;      // Auxiliary pointer for traversing function arguments
 
     // Insert argument list as the first child
     function_call_node = insert_child(identifier, args);
+
+    // Get reference to identifier from symbol table
+    status = find_id(identifier->lexval->value.name, 1);
+
+    // If identifier was not found (redundant)
+    if (status->error_type != 0)
+    {
+        // Output error and exit
+        print_error(status);
+    }
+
+    // Keep reference to symbol
+    symbol = ((symbol_t *)(status->data1));
+
+    // Update function type
+    function_call_node->type = symbol->type;
+
+    // Free container
+    free(status);
+    status = NULL;
+
+    // If identifier is not a function
+    if (symbol->kind != KIND_FUNCTION)
+    {
+        // Create error
+        status = create_error(symbol->kind == KIND_IDENTIFIER ? ERR_VARIABLE : ERR_VECTOR);
+
+        // Fill error data
+        status->data1 = symbol;                     // Symbol declaration in the symbol table
+        status->data2 = (void *)function_call_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
+    }
+
+    // Get reference to first function parameter, arugment and child
+    aux_param = symbol->args;
+    aux_args = args;
+
+    // Number of arguments being passed to the function
+    int arg_count = 0;
+
+    // Check passed arguments
+    while (aux_args != NULL)
+    {
+        // Based on node kind
+        switch (aux_args->st_kind)
+        {
+        case CMD_OPERAND: // ID or literal, no children
+            if (status == NULL && aux_param != NULL && aux_args->lexval->category == CAT_IDENTIFIER)
+            {
+                // Check if symbol has the right type
+                status = find_id(aux_args->lexval->value.name, 1);
+
+                // Check if id exists (redundant)
+                if (status->error_type != 0)
+                {
+                    print_error(status);
+                }
+
+                // Get id reference
+                par_symbol = (symbol_t *)(status->data1);
+
+                // Check if Id has the correct usage
+                if (par_symbol->kind != KIND_IDENTIFIER)
+                {
+                    // Create error
+                    status = create_error(par_symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
+
+                    // Fill data
+                    status->data1 = (void *)par_symbol;
+                    status->data2 = (void *)function_call_node;
+
+                    // Output error and exit
+                    print_error(status);
+                }
+            }
+
+            // Check if corresponding parameter has the same type
+            if (aux_param != NULL && !compatible_types(aux_args->type, ((symbol_t *)(aux_param->data))->type))
+            {
+                // Create error
+                status = create_error(ERR_WRONG_TYPE_ARGS);
+
+                // Fill error data
+                status->data1 = (void *)symbol;
+                status->data2 = (void *)function_call_node;
+                status->data3 = &arg_count;
+
+                // Only exit after processing all arguments
+            }
+            // Move to next argument
+            aux_args = aux_args->children;
+
+            break;
+        case CMD_VECTOR_ACCESS: // Vector acess, 2 children
+
+            if (status == NULL && aux_param != NULL)
+            {
+                // Check if corresponding parameter has the same type
+                if (!compatible_types(aux_args->type, ((symbol_t *)(aux_param->data))->type))
+                {
+                    // Create error
+                    status = create_error(ERR_WRONG_TYPE_ARGS);
+
+                    // Fill error data
+                    status->data1 = (void *)symbol;
+                    status->data2 = (void *)function_call_node;
+                    status->data3 = &arg_count;
+
+                    // Only exit after processing all arguments
+                }
+            }
+
+            // Move to next argument (3rd child)
+            aux_args = aux_args->children->brothers->brothers;
+
+            break;
+        case CMD_FUNCTION_CALL: // Function call, 2 children
+            if (status == NULL && aux_param != NULL)
+            {
+                // Check if corresponding parameter has the same type
+                if (!compatible_types(aux_args->type, ((symbol_t *)(aux_param->data))->type))
+                {
+                    // Create error
+                    status = create_error(ERR_WRONG_TYPE_ARGS);
+
+                    // Fill error data
+                    status->data1 = (void *)symbol;
+                    status->data2 = (void *)function_call_node;
+                    status->data3 = &arg_count;
+
+                    // Only exit after processing all arguments
+                }
+            }
+            // Move to next argument (3rd child)
+            aux_args = aux_args->children->brothers->brothers;
+
+            break;
+        case CMD_UNOP: // Unary operatrion, 1 child
+            if (status == NULL && aux_param != NULL)
+            {
+                // Check if corresponding parameter has the same type
+                if (!compatible_types(aux_args->type, ((symbol_t *)(aux_param->data))->type))
+                {
+                    // Create error
+                    status = create_error(ERR_WRONG_TYPE_ARGS);
+
+                    // Fill error data
+                    status->data1 = (void *)symbol;
+                    status->data2 = (void *)function_call_node;
+                    status->data3 = &arg_count;
+
+                    // Only exit after processing all arguments
+                }
+            }
+
+            // Move to next argument (2nd child)
+            aux_args = aux_args->children->brothers;
+
+            break;
+        case CMD_BINOP: // Binary operation, 2 children
+
+            if (status == NULL && aux_param != NULL)
+            {
+
+                // Check if corresponding parameter has the same type
+                if (!compatible_types(aux_args->type, ((symbol_t *)(aux_param->data))->type))
+                {
+                    // Create error
+                    status = create_error(ERR_WRONG_TYPE_ARGS);
+
+                    // Fill error data
+                    status->data1 = (void *)symbol;
+                    status->data2 = (void *)function_call_node;
+                    status->data3 = &arg_count;
+
+                    // Only exit after processing all arguments
+                }
+            }
+
+            // Move to next argument (3rd child)
+            aux_args = aux_args->children->brothers->brothers;
+
+            break;
+        case CMD_TERNOP: // Ternary operation, 3 children
+
+            if (status == NULL && aux_param != NULL)
+            {
+                // Check if corresponding parameter has the same type
+                if (!compatible_types(aux_args->type, ((symbol_t *)(aux_param->data))->type))
+                {
+                    // Create error
+                    status = create_error(ERR_WRONG_TYPE_ARGS);
+
+                    // Fill error data
+                    status->data1 = (void *)symbol;
+                    status->data2 = (void *)function_call_node;
+                    status->data3 = &arg_count;
+
+                    // Only exit after processing all arguments
+                }
+            }
+            // Move to next argument (4th child)
+            aux_args = aux_args->children->brothers->brothers->brothers;
+
+            break;
+        default: // Error, should never happen
+            // Create unknown error
+            status = create_error(-1);
+
+            // Output error and exit
+            print_error(status);
+            break;
+        }
+
+        // If there are still parameters in the function delcaration
+        if (aux_param != NULL)
+        {
+            // Move to next parameter
+            aux_param = aux_param->next;
+        }
+
+        // Increase argument count
+        arg_count++;
+    }
+
+    // If different amounts of passed and expected arguments
+    if (arg_count != symbol->argument_count)
+    {
+        // Create error
+        status = create_error(arg_count < symbol->argument_count ? ERR_MISSING_ARGS : ERR_EXCESS_ARGS);
+
+        // Fill error data
+        status->data1 = (void *)symbol;             // Function declaration
+        status->data2 = (void *)function_call_node; // Incorrect usage that generated the error
+
+        // Output error and exit
+        print_error(status);
+    }
+
+    // If an error occurred during argument check
+    if (status != NULL)
+    {
+        // Output error and exit
+        print_error(status);
+    }
 
     return function_call_node;
 }

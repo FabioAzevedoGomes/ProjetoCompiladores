@@ -5,25 +5,7 @@
 #define TREE_H
 
 #include "types.h"
-#include "symbol_table.h"
-
-// STRUCTURES
-
-/**
- * Defines a node from the AST
- */
-typedef struct node
-{
-    lexical_value_t *lexval; // Node information
-
-    Statement st_kind; // What kind of statement this node is (if, for, while, atrib, etc.)
-    LanguageType type; // Node type according to the language definitions
-
-    struct node *children; // Pointer to the this node's first child
-    struct node *brothers; // Pointer to the this node's next brother
-    struct node *next_cmd; // Pointer to the next command after this node's command
-
-} node_t;
+#include "symbol_table_management.h"
 
 // TREE MEMORY MANAGEMENT FUNCTIONS
 
@@ -39,13 +21,6 @@ extern void exporta(void *arvore);
  */
 extern void libera(void *arvore);
 
-/**
- * @brief Frees the memory used by a lexical value pointer, given it's nature
- * @param lexval Pointer to the lexical value structure
- * @param type What it the type of this lexical value
- */
-void free_lexical_value(lexical_value_t *lexval, LanguageType type);
-
 // NODE CREATION METHODS
 
 /**
@@ -53,9 +28,10 @@ void free_lexical_value(lexical_value_t *lexval, LanguageType type);
  * @param lexval Lexical value of the token being used to create the node
  * @param type   The type of this node, TYPE_TBA if not yet known
  * @param kind   The kind of statement for this node
+ * @param declare If this is a variable declaration (and thus should not check symbol table)
  * @returns Pointer to the node
  */
-node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statement st_kind);
+node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statement st_kind, int declare);
 
 /**
  * @brief Inserts the second command as next_cmd of the first comand

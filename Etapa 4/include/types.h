@@ -43,7 +43,8 @@ typedef enum LanguageType
     TYPE_CHAR,   // Language chars
     TYPE_STRING, // Language strings
     TYPE_TBA,    // Unknown type, "To Be Assigned"
-    TYPE_NA      // Typing not applicable, used for nodes containing commands
+    TYPE_NA,     // Typing not applicable, used for nodes containing commands
+    TYPE_ANY     // Any type is acceptable, for operators such as & and *
 
 } LanguageType;
 
@@ -82,7 +83,109 @@ typedef struct lexical_value
 
 } lexical_value_t;
 
+// Different kinds of symbol that can be present in the symbol table
+typedef enum SymbolKind
+{
+    KIND_IDENTIFIER, // The symbol is a simple identifier
+    KIND_VECTOR,     // The symbol is a vector
+    KIND_FUNCTION,   // The symbol is a function
+    KIND_NONE        // The symbol has no applicable nature
+
+} SymbolKind;
+
+// SYMBOL TABLE DATA TYPES
+
+/**
+ * @brief Defines an entry in the symbol table 
+ */
+typedef struct symbol_table_entry
+{
+    void *data;                      // Data stored in this entry
+    struct symbol_table_entry *next; // Pointer to the next entry
+
+} st_entry_t;
+
+/**
+ * @brief Defines a symbol in the language
+ */
+typedef struct symbol_data
+{
+    char *key; // Unique name for the symbol
+
+    int declaration_line; // Line in the code where this symbol was declared
+
+    int argument_count; // Amount of arguments received, if this symbol is a function
+    st_entry_t *args;   // Pointer to the first argument (if this is a function) or next argument (if this is an argument)
+
+    LanguageType type; // Assigned type for the symbol
+    SymbolKind kind;   // The nature of the symbol (string, function, id, vector, etc.)
+
+    int size;  // Occupied space for the symbol
+    int count; // Amount of that type is being stored (For vectors and strings)
+
+    lexical_value_t *data; // Data for this symbol
+
+} symbol_t;
+
+/**
+ * @brief Defines the handler for a symbol table 
+ */
+typedef struct symbol_table_handler
+{
+    int size;          // Number of entries in the symbol table
+    st_entry_t *first; // First entry in the symbol table
+
+} symbol_table_t;
+
+
+// STACK DATA TYPES
+
+/**
+ * @brief Defines an entry in the stack 
+ */
+typedef struct stack_entry
+{
+    void *data;              // Data associated with this entry
+    struct stack_entry *bot; // Pointer to the stack entry under this one
+
+} entry_t;
+
+/**
+ * @brief Defines the handler for a stack data structure
+ */
+typedef struct stack_handle
+{
+    int size;     // Amount of entries stored in the stack
+    entry_t *top; // Pointer to the top of the stack
+
+} stack_t;
+
+// TREE STRUCTURES
+
+/**
+ * Defines a node from the AST
+ */
+typedef struct node
+{
+    lexical_value_t *lexval; // Node information
+
+    Statement st_kind; // What kind of statement this node is (if, for, while, atrib, etc.)
+    LanguageType type; // Node type according to the language definitions
+
+    struct node *children; // Pointer to the this node's first child
+    struct node *brothers; // Pointer to the this node's next brother
+    struct node *next_cmd; // Pointer to the next command after this node's command
+
+} node_t;
+
 // FUNCTIONS
+
+/**
+ * @brief Frees the memory used by a lexical value pointer, given it's nature
+ * @param lexval Pointer to the lexical value structure
+ * @param type What it the type of this lexical value
+ */
+void free_lexical_value(lexical_value_t *lexval, LanguageType type);
 
 /**
  * @brief Returns the size for a given type
@@ -106,5 +209,11 @@ int compatible_types(LanguageType type1, LanguageType type2);
  * @returns Resulting type, -1 if incompatible
  */
 LanguageType infer_type(LanguageType type1, LanguageType type2);
+
+/**
+ * @brief Returns the name of the type as a string
+ * @param type The type
+ */
+char* type_name(LanguageType type);
 
 #endif

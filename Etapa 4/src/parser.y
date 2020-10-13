@@ -15,16 +15,9 @@
     // Extern reference to the AST
     extern void *arvore;
 
-    // Pointer to a structure containing semantic error details
-    error_t *error_data = NULL;
-
     // Pointer to a list of local variables that are being declared and possibly initialized
     st_entry_t *local_var_symbol_list = NULL;
 
-    // Pointer to the entry for the current function, NULL if global.
-    st_entry_t *current_function = NULL;
-    
-    st_entry_t *param_list = NULL;
 %}
 
 // Union for token lexical value
@@ -194,12 +187,12 @@ tipo:   TK_PR_INT       {$$ = TYPE_INT;}    // A palavra int
  * Um literal char
  * Um literal string
  */
-literal:   TK_LIT_INT       {$$ = create_lexical_node($1, TYPE_INT,    CMD_OPERAND);} // Cria um nodo para o lit int
-         | TK_LIT_FLOAT     {$$ = create_lexical_node($1, TYPE_FLOAT,  CMD_OPERAND);} // Cria um nodo para o lit float
-         | TK_LIT_TRUE      {$$ = create_lexical_node($1, TYPE_BOOL,   CMD_OPERAND);} // Cria um nodo para o lit true
-         | TK_LIT_FALSE     {$$ = create_lexical_node($1, TYPE_BOOL,   CMD_OPERAND);} // Cria um nodo para o lit false
-         | TK_LIT_CHAR      {$$ = create_lexical_node($1, TYPE_CHAR,   CMD_OPERAND);} // Cria um nodo para o lit char
-         | TK_LIT_STRING    {$$ = create_lexical_node($1, TYPE_STRING, CMD_OPERAND);} // Cria um nodo para o lit string
+literal:   TK_LIT_INT       {$$ = create_lexical_node($1, TYPE_INT,    CMD_OPERAND, 1);} // Cria um nodo para o lit int
+         | TK_LIT_FLOAT     {$$ = create_lexical_node($1, TYPE_FLOAT,  CMD_OPERAND, 1);} // Cria um nodo para o lit float
+         | TK_LIT_TRUE      {$$ = create_lexical_node($1, TYPE_BOOL,   CMD_OPERAND, 1);} // Cria um nodo para o lit true
+         | TK_LIT_FALSE     {$$ = create_lexical_node($1, TYPE_BOOL,   CMD_OPERAND, 1);} // Cria um nodo para o lit false
+         | TK_LIT_CHAR      {$$ = create_lexical_node($1, TYPE_CHAR,   CMD_OPERAND, 1);} // Cria um nodo para o lit char
+         | TK_LIT_STRING    {$$ = create_lexical_node($1, TYPE_STRING, CMD_OPERAND, 1);} // Cria um nodo para o lit string
 ;
 
 // Um tipo estatico valido pode ser:
@@ -268,8 +261,8 @@ identificador_global:   TK_IDENTIFICADOR                    {$$ = make_symbol_en
  * Um tipo estatico de retorno...
  * ...seguido pelo nome da funcao e sua assinatura
  */
-definicao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura {$$ = create_lexical_node($2, $1, CMD_FUNCTION_DECLARATION);
-                                                             current_function = declare_function(make_function_entry($2, $1), $3, 1);}// Declara a funcao na tabela de simbolos global
+definicao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura {$$ = create_lexical_node($2, $1, CMD_FUNCTION_DECLARATION, 1);
+                                                             declare_function(make_function_entry($2, $1), $3, 1);}// Declara a funcao na tabela de simbolos global
                                                             
 ;
 
@@ -324,23 +317,12 @@ parametro: tipo_const TK_IDENTIFICADOR {$$ = make_param_entry($2, $1);
 
 // O inicio de um bloco de comandos inicia um novo escopo
 bloco_comandos_inicio: '{' {free_lexical_value($1, TYPE_NA);
-                            enter_scope(); // Entra em um novo escopo
-                            if (current_function != NULL)// Se entrou em uma funcao
-                            {
-                                // Declara os parametros da funcao no escopo local
-                                declare_params(((symbol_t *)(current_function->data))->args);
-                            }}
+                            enter_scope();} // Entra em um novo escopo
 ;
 
 // O fim de um bloco de comandos fecha o escopo atual
 bloco_comandos_fim: '}' {free_lexical_value($1, TYPE_NA); 
-                         leave_scope();                // Sai do escopo do bloco de comandos
-                         if (current_function != NULL) // Se saiu de uma funcao
-                         {
-                            // Reseta o ponteiro para a funcao atual
-                            free(current_function); 
-                            current_function = NULL;
-                         }}
+                         leave_scope();} // Sai do escopo atual
 ;
 
 /**
@@ -399,10 +381,10 @@ comando_simples:   controle_fluxo ';'         {$$ = $1; free_lexical_value($2, T
  * O nome da funcao, seguido de parenteses sem argumentos
  * O nome da funcao, seguido de parenteses e uma lista de argumentos
  */
-chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = create_function_call(create_lexical_node($1, TYPE_TBA, CMD_OPERAND), NULL);
+chamada_funcao:   TK_IDENTIFICADOR '(' ')'                  {$$ = create_function_call(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 0), NULL);
                                                              free_lexical_value($2, TYPE_NA);       // Libera a memoria usada para o delimitador (
                                                              free_lexical_value($3, TYPE_NA);}      // Libera a memoria usada para o delimitador )
-                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = create_function_call(create_lexical_node($1, TYPE_TBA, CMD_OPERAND), $3);
+                | TK_IDENTIFICADOR '(' lista_argumentos ')' {$$ = create_function_call(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 0), $3);
                                                              free_lexical_value($2, TYPE_NA);                // Libera a memoria usada para o delimitador (;)
                                                              free_lexical_value($4, TYPE_NA);}               // Libera a memoria usada para o delimitador (;)
 ;
@@ -434,7 +416,7 @@ argumento: expressao {$$ = $1;} // Retorna o nodo criado
  * Um identificador simples ...
  * ... seguido de uma expressao entre colchetes
  */
-vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = create_vector_access(create_lexical_node($1, TYPE_TBA, CMD_OPERAND), $3);
+vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = create_vector_access(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 0), $3);
                                                     free_lexical_value($2, TYPE_NA);   // Libera a memoria usada para o delimitador (;)
                                                     free_lexical_value($4, TYPE_NA);}  // Libera a memoria usada para o delimitador (;)
 ;
@@ -472,13 +454,13 @@ lista_identificadores_locais:   identificador_local                             
 identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;
                                                                    local_var_symbol_list = make_symbol_list(make_symbol_entry($1, 1, KIND_IDENTIFIER) ,local_var_symbol_list);
                                                                    free_lexical_value($1, TYPE_NA);}
-                     | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND),
+                     | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 1),
                                                                                $3,
-                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE));
+                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE, 1));
                                                                    local_var_symbol_list = make_symbol_list(make_symbol_entry($1, 1, KIND_IDENTIFIER) ,local_var_symbol_list);}
-                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND),
-                                                                               create_lexical_node($3, TYPE_TBA, CMD_OPERAND),
-                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE));
+                     | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = create_init(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 1),
+                                                                               create_lexical_node($3, TYPE_TBA, CMD_OPERAND, 0),
+                                                                               create_lexical_node($2, TYPE_NA,  CMD_INIT_VARIABLE, 1));
                                                                    local_var_symbol_list = make_symbol_list(make_symbol_entry($1, 1, KIND_IDENTIFIER) ,local_var_symbol_list);}
 ;
 
@@ -487,8 +469,8 @@ identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL;
  * Uma atribuicao a um identificador simples
  * Uma atribuicao a um identificador indexado
  */
-atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = create_attrib(create_lexical_node($1, TYPE_TBA, CMD_OPERAND), $3, create_lexical_node($2, TYPE_TBA, CMD_ATTRIB_VARIABLE));}
-            | vetor_indexado '=' expressao   {$$ = create_attrib($1, $3, create_lexical_node($2, TYPE_TBA, CMD_ATTRIB_VARIABLE));}
+atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = create_attrib(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 0), $3, create_lexical_node($2, TYPE_TBA, CMD_ATTRIB_VARIABLE, 1));}
+            | vetor_indexado '=' expressao   {$$ = create_attrib($1, $3, create_lexical_node($2, TYPE_TBA, CMD_ATTRIB_VARIABLE, 0));}
 ;
 
 /** Um comando de entrada ou saida pode ser:
@@ -497,8 +479,8 @@ atribuicao:   TK_IDENTIFICADOR '=' expressao {$$ = create_attrib(create_lexical_
  * A palavra output, seguida de um identificador
  * A palavra output, seguida de um literal
  */
-comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = create_input(create_lexical_node($2, TYPE_NA, CMD_OPERAND));}
-            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = create_output(create_lexical_node($2, TYPE_NA, CMD_OPERAND));}
+comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = create_input(create_lexical_node($2, TYPE_TBA, CMD_OPERAND, 0));}
+            | TK_PR_OUTPUT TK_IDENTIFICADOR {$$ = create_output(create_lexical_node($2, TYPE_TBA, CMD_OPERAND, 0));}
             | TK_PR_OUTPUT literal          {$$ = create_output($2);}
 ;
 
@@ -508,8 +490,8 @@ comando_es:   TK_PR_INPUT TK_IDENTIFICADOR  {$$ = create_input(create_lexical_no
  * O operador de shift left  <<
  * O operador de shift right >> 
  */
-operador_shift:   TK_OC_SL {$$ = create_lexical_node($1, TYPE_TBA, CMD_SHIFT);} // Cria nodo para o operador de shift left 
-                | TK_OC_SR {$$ = create_lexical_node($1, TYPE_TBA, CMD_SHIFT);} // Cria nodo para o operador de shift right
+operador_shift:   TK_OC_SL {$$ = create_lexical_node($1, TYPE_TBA, CMD_SHIFT, 1);} // Cria nodo para o operador de shift left 
+                | TK_OC_SR {$$ = create_lexical_node($1, TYPE_TBA, CMD_SHIFT, 1);} // Cria nodo para o operador de shift right
 ;
 
 /**
@@ -518,9 +500,9 @@ operador_shift:   TK_OC_SL {$$ = create_lexical_node($1, TYPE_TBA, CMD_SHIFT);} 
 * Um identificador, seguido de um operador de shift e um literal inteiro positivo
 * Um vetor indexado por uma expressao, seguido de um operador de shift e um literal inteiro positivo
 */
-comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {$$ = create_shift(create_lexical_node($1, TYPE_INT, CMD_OPERAND), 
-                                                                               create_lexical_node($3, TYPE_INT, CMD_OPERAND), $2);}
-               | vetor_indexado operador_shift TK_LIT_INT   {$$ = create_shift($1, create_lexical_node($3, TYPE_INT, CMD_OPERAND), $2);}
+comando_shift:   TK_IDENTIFICADOR operador_shift TK_LIT_INT {$$ = create_shift(create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 0), 
+                                                                               create_lexical_node($3, TYPE_INT, CMD_OPERAND, 1), $2);}
+               | vetor_indexado operador_shift TK_LIT_INT   {$$ = create_shift($1, create_lexical_node($3, TYPE_INT, CMD_OPERAND, 1), $2);}
 ;
 
 
@@ -618,20 +600,14 @@ fator:   '(' expressao ')' {$$ = $2;                          // Retorna o nodo 
  *
  * Um identificador
  * Um vetor indexado
- * Um literal inteiro
- * Um literal float
+ * Um literal
  * Uma chamada de funcao
- * Um literal TRUE
- * Um literal FALSE
  * Um operador unario aplicado a um fator
  */
-operando:   TK_IDENTIFICADOR       {$$ = create_lexical_node($1, TYPE_TBA, CMD_OPERAND);}   // Cria um nodo para o identificador
+operando:   TK_IDENTIFICADOR       {$$ = create_lexical_node($1, TYPE_TBA, CMD_OPERAND, 0);}   // Cria um nodo para o identificador
           | vetor_indexado         {$$ = $1;}                
-          | TK_LIT_INT             {$$ = create_lexical_node($1, TYPE_INT,   CMD_OPERAND);} // Cria um nodo para o literal inteiro
-          | TK_LIT_FLOAT           {$$ = create_lexical_node($1, TYPE_FLOAT, CMD_OPERAND);} // Cria um nodo para o literal float
+          | literal                {$$ = $1;}
           | chamada_funcao         {$$ = $1;}                                      
-          | TK_LIT_TRUE            {$$ = create_lexical_node($1, TYPE_BOOL,  CMD_OPERAND);} // Cria um nodo para o literal true
-          | TK_LIT_FALSE           {$$ = create_lexical_node($1, TYPE_BOOL,  CMD_OPERAND);} // Cria um nodo para o literal false
           | operador_unario fator  {$$ = create_unop($1, $2);}
 ; 
 
@@ -645,12 +621,12 @@ operando:   TK_IDENTIFICADOR       {$$ = create_lexical_node($1, TYPE_TBA, CMD_O
  * O comparador de menor
  * O comparador de maior
  */
-comparador_relacional:   TK_OC_GE {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o comparador maior ou igual
-                       | TK_OC_LE {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o comparador menor ou igual
-                       | TK_OC_EQ {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o comparador igual
-                       | TK_OC_NE {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o comparador diferente
-                       | '<'      {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o comparador menor
-                       | '>'      {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o comparador maior
+comparador_relacional:   TK_OC_GE {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o comparador maior ou igual
+                       | TK_OC_LE {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o comparador menor ou igual
+                       | TK_OC_EQ {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o comparador igual
+                       | TK_OC_NE {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o comparador diferente
+                       | '<'      {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o comparador menor
+                       | '>'      {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o comparador maior
 ;
 
 /* Um operador logico pode ser:
@@ -658,8 +634,8 @@ comparador_relacional:   TK_OC_GE {$$ = create_lexical_node($1, TYPE_INT, CMD_BI
  * O operador AND (&&)
  * O operador OR  (||)
  */
-operador_logico:   TK_OC_AND {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP);} // Cria nodo para o operador AND
-                 | TK_OC_OR  {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP);} // Cria nodo para o operador OR
+operador_logico:   TK_OC_AND {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP, 1);} // Cria nodo para o operador AND
+                 | TK_OC_OR  {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP, 1);} // Cria nodo para o operador OR
 ;
 
 /** Um operador binario de baixa precedencia pode ser:
@@ -672,10 +648,10 @@ operador_logico:   TK_OC_AND {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP)
  * Um operador logico
  * A 'parte' interna de uma expressao condicional
  */
-operador_binario_baixa_prec:   '+'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador de some
-                             | '-'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador de subtracao
-                             | '|'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador bitwise or
-                             | '&'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria um nodo para o operador bitwise and
+operador_binario_baixa_prec:   '+'                   {$$ = create_lexical_node($1, TYPE_ANY, CMD_BINOP, 1);} // Cria um nodo para o operador de some
+                             | '-'                   {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria um nodo para o operador de subtracao
+                             | '|'                   {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP, 1);} // Cria um nodo para o operador bitwise or
+                             | '&'                   {$$ = create_lexical_node($1, TYPE_BOOL, CMD_BINOP, 1);} // Cria um nodo para o operador bitwise and
                              | comparador_relacional {$$ = $1;}                           // Retorna o nodo do comparador relacional 
                              | operador_logico       {$$ = $1;}                           // Retorna o nodo do operador logico
                              | '?' expressao ':'     {$$ = create_ternop($2);             // Cria o operador ternario parcialmente
@@ -691,10 +667,10 @@ operador_binario_baixa_prec:   '+'                   {$$ = create_lexical_node($
  * O operador de modulo
  * O operador de exponenciacao
  */
-operador_binario_alta_prec:   '*' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o operador de multiplicacao
-                            | '/' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o operador de divisao
-                            | '%' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o operador de modulo
-                            | '^' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP);} // Cria nodo para o operador de exponenciacao
+operador_binario_alta_prec:   '*' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o operador de multiplicacao
+                            | '/' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o operador de divisao
+                            | '%' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o operador de modulo
+                            | '^' {$$ = create_lexical_node($1, TYPE_INT, CMD_BINOP, 1);} // Cria nodo para o operador de exponenciacao
 ;
 
 /** Um operador unario pode ser:
@@ -707,13 +683,13 @@ operador_binario_alta_prec:   '*' {$$ = create_lexical_node($1, TYPE_INT, CMD_BI
  * O operador de avaliacao de expressao
  * O operador de acesso a tabela hash
  */
-operador_unario:   '+' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP);} // Cria nodo para o operador de positividade explicita
-                 | '-' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP);} // Cria nodo para o operador de inversao de sinal
-                 | '!' {$$ = create_lexical_node($1, TYPE_BOOL, CMD_UNOP);} // Cria nodo para o operador de negacao
-                 | '&' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP);} // Cria nodo para o operador de acesso a endereco
-                 | '*' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP);} // Cria nodo para o operador de resolucao de ponteiros
-                 | '?' {$$ = create_lexical_node($1, TYPE_BOOL, CMD_UNOP);} // Cria nodo para o operador de avaliacao de expressao
-                 | '#' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP);} // Cria nodo para o operador de acesso a tabela hash
+operador_unario:   '+' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP, 1);} // Cria nodo para o operador de positividade explicita
+                 | '-' {$$ = create_lexical_node($1, TYPE_INT,  CMD_UNOP, 1);} // Cria nodo para o operador de inversao de sinal
+                 | '!' {$$ = create_lexical_node($1, TYPE_BOOL, CMD_UNOP, 1);} // Cria nodo para o operador de negacao
+                 | '&' {$$ = create_lexical_node($1, TYPE_ANY,  CMD_UNOP, 1);} // Cria nodo para o operador de acesso a endereco
+                 | '*' {$$ = create_lexical_node($1, TYPE_ANY,  CMD_UNOP, 1);} // Cria nodo para o operador de resolucao de ponteiros
+                 | '?' {$$ = create_lexical_node($1, TYPE_BOOL, CMD_UNOP, 1);} // Cria nodo para o operador de avaliacao de expressao
+                 | '#' {$$ = create_lexical_node($1, TYPE_ANY,  CMD_UNOP, 1);} // Cria nodo para o operador de acesso a tabela hash
 ;
 
 %%

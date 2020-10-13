@@ -11,29 +11,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "types.h"
 #include "symbol_table.h"
-
-// STACK DATA TYPES
-
-/**
- * @brief Defines an entry in the stack 
- */
-typedef struct stack_entry
-{
-    void *data;              // Data associated with this entry
-    struct stack_entry *bot; // Pointer to the stack entry under this one
-
-} entry_t;
-
-/**
- * @brief Defines the handler for a stack data structure
- */
-typedef struct stack_handle
-{
-    int size;     // Amount of entries stored in the stack
-    entry_t *top; // Pointer to the top of the stack
-
-} stack_t;
 
 // STACK GLOBAL VARIABLES
 

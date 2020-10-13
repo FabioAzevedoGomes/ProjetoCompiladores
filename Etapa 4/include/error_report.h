@@ -6,6 +6,7 @@
 #define ERROR_H
 
 #include "errors.h"
+#include "types.h"
 
 /**
  * @brief Defines the format for error descriptions to be returned  
@@ -21,6 +22,14 @@ typedef struct error_return_format
 
 } error_t;
 
+#include "symbol_table.h" // Symbol data type
+
+/**
+ * @brief Defined in scanner.l, get current line number
+ * @returns Current line number
+ */
+int get_line_number();
+
 /**
  * @brief Allocates memory for an error descriptor and initializes it
  * @param type The type for the error being reported
@@ -29,7 +38,7 @@ typedef struct error_return_format
 error_t *create_error(int type);
 
 /**
- * @brief Prints information about a semantic error to stdout
+ * @brief Prints information about a semantic error to stdout and exists with error status code
  * @param error The error description
  */
 void print_error(error_t *error);

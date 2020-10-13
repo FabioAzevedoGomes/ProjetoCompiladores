@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int initialized = 0; // Whether the global scope has been initialized
+
 void init()
 {
     // Initializes the stack and global symbol table
@@ -10,6 +12,9 @@ void init()
 
     // Signals initialize
     initialized = 1;
+
+    // Sets current function to NULL (Global scope)
+    current_function = NULL;
 }
 
 void enter_scope()
@@ -22,6 +27,13 @@ void enter_scope()
 
     // Pushes it to the stack
     push((void *)st);
+
+    // If entering a function
+    if (current_function != NULL)
+    {
+        // Declare function parameters in local scope
+        declare_params(((symbol_t *)(current_function->data))->args);
+    }
 }
 
 void leave_scope()
@@ -35,10 +47,21 @@ void leave_scope()
     // Free symbol table memory
     if (st != NULL)
     {
-        printf("Leaving scope with symbol table: \n");
-        print_symbol_table(st);
+        // Debug
+        //printf("Leaving scope with symbol table: \n");
+        //print_symbol_table(st);
 
         free_symbol_table(st);
+    }
+
+    // If leaving a function
+    if (current_function != NULL)
+    {
+        // Free current function container (Not the actual function entry)
+        free(current_function);
+
+        // Reset pointer
+        current_function = NULL;
     }
 }
 
@@ -153,7 +176,7 @@ void declare_symbol_list(st_entry_t *list, LanguageType type)
         for (aux = list; aux != NULL && status == NULL;)
         {
             // Update symbol type
-            ((symbol_t*)(aux->data))->type = type;
+            ((symbol_t *)(aux->data))->type = type;
 
             // Try to insert symbol
             if ((status = insert_symbol(((entry_t *)(stack->top))->data, aux->data)) == NULL)
@@ -215,7 +238,7 @@ void check_init_types(node_t *vars, LanguageType type)
                 // If symbol does not exist
                 if (status->error_type != 0)
                 {
-                    print_error(status); // TODO Maybe stop execution here, not sure
+                    print_error(status);
                 }
                 else
                 {
@@ -367,15 +390,15 @@ st_entry_t *declare_function(st_entry_t *function, st_entry_t *params, int globa
         if (params != NULL && params->data != NULL)
             function_symbol->argument_count = ((symbol_t *)(params->data))->argument_count + 1;
 
+        // Try to insert function symbol
         if ((status = insert_symbol(((entry_t *)(stack->top))->data, function_symbol)) != NULL)
-        {
             print_error(status);
-
-            // TODO Exit?
-        }
     }
 
-    // Return created function entry in the symbol table
+    // Set the current function pointer
+    current_function = function;
+
+    // Return function
     return function;
 }
 
