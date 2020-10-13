@@ -1057,57 +1057,6 @@ node_t *create_init(node_t *identifier, node_t *rval, node_t *operator)
     // Add rval as second child
     init_node = insert_child(init_node, rval);
 
-    // Update initialization type (Identifier type prevails)
-    init_node->type = identifier->type;
-
-    // If operator is an identifier
-    if (operator->lexval->category == CAT_IDENTIFIER)
-    {
-        // Get identifier
-        status = find_id(operator->lexval->value.name, 1);
-
-        // Check if it exists (redundant)
-        if (status->error_type != 0)
-        {
-            print_error(status);
-        }
-
-        // Get reference to symbol
-        symbol = ((symbol_t *)(status->data1));
-
-        // Free container
-        free(status);
-        status = NULL;
-
-        // Check for correct usage
-        if (symbol->kind != KIND_IDENTIFIER)
-        {
-            // Create error
-            status = create_error(symbol->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
-
-            // Fill error data
-            status->data1 = (void *)symbol;
-            status->data2 = (void *)init_node;
-
-            // Output error and exit
-            print_error(status);
-        }
-    }
-
-    // If types are not compatbile
-    if (!compatible_types(init_node->type, rval->type))
-    {
-        // Create error
-        status = create_error(ERR_WRONG_TYPE);
-
-        // Fill error data
-        status->data1 = (void *)init_node;
-        // TODO Maybe here add more error data?
-
-        // Print error and exit
-        print_error(status);
-    }
-
     return init_node;
 }
 

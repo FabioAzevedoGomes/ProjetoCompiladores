@@ -52,7 +52,7 @@ void print_error(error_t *error)
             printf("Incorrect use of function \"%s\":\n\n %s \n\n[ERROR] Declared on line %d\n", ((symbol_t *)(error->data1))->key, reconstruct_node((node_t *)(error->data2)), ((symbol_t *)(error->data1))->declaration_line);
             break;
         case ERR_WRONG_TYPE:
-
+            printf("Wrong type\n");
             break;
         case ERR_STRING_TO_X:
             printf("No implicit conversion for STRING\n");
@@ -81,18 +81,17 @@ void print_error(error_t *error)
             printf("Incorrect argument type in argument %d of function call:\n\n %s \n\n[ERROR] Exepected <EXPECTED-TYPE>>, but found <EXPECTED-ARG>\n", *((int *)(error->data3)), reconstruct_node((node_t *)(error->data2)));
             break;
         case ERR_WRONG_PAR_INPUT:
-
+            printf("WRONG_PAR_INPUT");
             break;
         case ERR_WRONG_PAR_OUTPUT:
-
+            printf("WRONG_PAR_OUTPUT");
             break;
         case ERR_WRONG_PAR_RETURN:
-
+            printf("WRONG_PAR_RETURN");
             break;
         case ERR_WRONG_PAR_SHIFT:
-
+            printf("WRONG_PAR_SHIFT");
             break;
-
         default:
             printf("Invalid error code received from parser: %d\n", error->error_type);
             break;
