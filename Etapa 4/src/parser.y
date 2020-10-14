@@ -246,7 +246,7 @@ lista_identificadores_globais:   identificador_global                           
  */
 identificador_global:   TK_IDENTIFICADOR                    {$$ = make_symbol_entry($1, 1, KIND_IDENTIFIER);
                                                              free_lexical_value($1, TYPE_NA);}
-                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {$$ = make_symbol_entry($1, $3->value.integer, KIND_IDENTIFIER);
+                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {$$ = make_symbol_entry($1, $3->value.integer, KIND_VECTOR);
                                                              free_lexical_value($1, TYPE_NA);
                                                              free_lexical_value($2, TYPE_NA);   // Libera a memoria usada para o delimitador colchete ([)
                                                              free_lexical_value($3, TYPE_NA);   // Libera a memoria usada para o inteiro usado no tamanho

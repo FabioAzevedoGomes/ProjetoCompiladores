@@ -33,5 +33,10 @@ st_management.o:
 symbol_table.o:
 	gcc -c ${SRC}symbol_table.c -o ${OBJ}symbol_table.o -I ${INC} -Wall
 
+test:
+	@cat -n test.c
+	@#valgrind --leak-check=full --track-origins=yes ./etapa4 < test.c
+	@./etapa4 < test.c
+
 clean:
 	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa4 ${DOC}*.output

@@ -291,6 +291,12 @@ char *reconstruct_node(node_t *node)
         sprintf(code + size, "while ( %s ) ...", temp1);
         size += strlen(temp1) + 14;
         break;
+    case CMD_IO: // Get and operation expression being output or input
+        temp1 = node->lexval->value.name;
+        temp2 = reconstruct_node(node->children);
+        sprintf(code + size, "%s %s", temp1, temp2);
+        size += strlen(temp1) + strlen(temp2) + 1;
+        break;
     default: // Other types of node do not generate semantic errors
         sprintf(code + size, "< OTHER NODES >");
         size += 15;
@@ -303,7 +309,7 @@ char *reconstruct_node(node_t *node)
 void print_error(error_t *error)
 {
     // Print an error line start:
-    printf("[ERROR] On line %d: ", get_line_number());
+    printf("\n\n[ERROR] On line %d: ", get_line_number());
 
     if (error != NULL)
     {
@@ -333,7 +339,8 @@ void print_error(error_t *error)
             printf(" %s\n", reconstruct_function_declaration((symbol_t *)(error->data1)));
             break;
         case ERR_WRONG_TYPE:
-            printf("Assignment from incompatible types\n");
+            printf("Assignment from incompatible types:\n");
+            printf(" %s = %s\n", reconstruct_node(((node_t *)(error->data1))), reconstruct_node(((node_t *)(error->data2))));
             printf("[ERROR] lval has type %s, but rval has type %s\n", type_name(((node_t *)(error->data1))->type), type_name(((node_t *)(error->data2))->type));
             break;
         case ERR_STRING_TO_X:
@@ -367,18 +374,18 @@ void print_error(error_t *error)
             printf(" %s\n", reconstruct_function_declaration((symbol_t *)(error->data1)));
             break;
         case ERR_WRONG_PAR_INPUT:
-            printf("Incompatible types for INPUT statement");
-            printf("[ERROR] Expected INT or FLOAT, but got %s\n", type_name(((node_t *)(error->data2))->type));
-            printf("[ERROR] \"%s\" was declared on line %d\n", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->declaration_line);
+            printf("Incompatible types for INPUT statement:\n");
+            printf(" %s\n", reconstruct_node((node_t *)(error->data1)));
+            printf("[ERROR] Expected INT or FLOAT, but got %s\n", type_name(((node_t *)(error->data1))->children->type));
             break;
         case ERR_WRONG_PAR_OUTPUT:
-            printf("Incompatible type for OUTPUT statement");
-            printf("[ERROR] Expected INT or FLOAT, but got %s\n", type_name(((node_t *)(error->data2))->type));
-            if (error->data1 != NULL)
-                printf("[ERROR] \"%s\" was declared on line %d\n", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->declaration_line);
+            printf("Incompatible type for OUTPUT statement:\n");
+            printf(" %s\n", reconstruct_node((node_t *)(error->data1)));
+            printf("[ERROR] Expected INT or FLOAT, but got %s\n", type_name(((node_t *)(error->data1))->children->type));
             break;
         case ERR_WRONG_PAR_RETURN:
-            printf("Incompatible type for RETURN statement\n");
+            printf("Incompatible type for RETURN statement:\n");
+            printf(" return %s\n",reconstruct_node((node_t *)(error->data2)));
             printf("[ERROR] Expected %s, but got expression of type %s\n", type_name(((symbol_t *)(error->data1))->type), type_name(((node_t *)(error->data2))->type));
             printf("[ERROR] Function was declared on line %d:\n", ((symbol_t *)(error->data1))->declaration_line);
             printf(" %s\n", reconstruct_function_declaration((symbol_t *)(error->data1)));
@@ -392,12 +399,14 @@ void print_error(error_t *error)
             break;
         }
 
+        printf("Exiting with status code %d \n\n", error->error_type);
+
         exit(error->error_type);
     }
     else
     {
         // NULL error, should never happen
-        printf("Received NULL error descriptor.\n This should never happen, aborting.");
+        printf("Received NULL error descriptor.\n This should never happen, aborting.\n\n");
         exit(-1);
     }
 }

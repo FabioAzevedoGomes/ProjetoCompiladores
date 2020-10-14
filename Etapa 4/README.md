@@ -11,7 +11,7 @@
 
   - `FUNCTION` and `VARIABLE` and `VECTOR`
     * `data1 : symbol_t*` : Symbol information
-    * `data2 : node_t *` : Node containign incorreect usage
+    * `data2 : node_t *` : Node containing incorrect usage
 
   - `WRONG_TYPE`
     * `data1 : node_t *` : Node containing lval
@@ -33,12 +33,10 @@
     * `data3 : int *` : Index of the incorrect argument
 
   - `WRONG_PAR_INPUT`
-    * `data1 : symbol_t *` : Operand symbol information
-    * `data2 : node_t *` : Node containing operand being input to
+    * `data1 : node_t *` : Node containing operand being input to
 
   - `WRONG_PAR_OUTPUT`
-    * `data1 : symbol_t *` : Operand symbol information (NULL if literal)
-    * `data2 : node_t *` : Node containing expression being output
+    * `data1 : node_t *` : Node containing expression being output
 
   - `WRONG_PAR_RETURN`
     * `data1 : symbol_t *` : Function symbol information

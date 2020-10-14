@@ -187,4 +187,12 @@ node_t *create_function_declaration(node_t *identifier, node_t *body, LanguageTy
  */
 node_t *create_function_call(node_t *identifier, node_t *args);
 
+/**
+ * @brief Checks if an ID is being used correctly as a variable, vector or function
+ * @param usage Node where id is being used (for error reporting)
+ * @param id    Node containing id
+ * @param mode  How it's being used
+ */
+void check_correct_id_usage(node_t *usage, node_t *id, SymbolKind mode);
+
 #endif
