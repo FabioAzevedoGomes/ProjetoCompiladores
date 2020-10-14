@@ -187,6 +187,7 @@ tipo:   TK_PR_INT       {$$ = TYPE_INT;}    // A palavra int
  * Um literal char
  * Um literal string
  */
+ // TODO Inserir o literal na tabela de simbolos
 literal:   TK_LIT_INT       {$$ = create_lexical_node($1, TYPE_INT,    CMD_OPERAND, 1);} // Cria um nodo para o lit int
          | TK_LIT_FLOAT     {$$ = create_lexical_node($1, TYPE_FLOAT,  CMD_OPERAND, 1);} // Cria um nodo para o lit float
          | TK_LIT_TRUE      {$$ = create_lexical_node($1, TYPE_BOOL,   CMD_OPERAND, 1);} // Cria um nodo para o lit true

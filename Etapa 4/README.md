@@ -14,14 +14,15 @@
     * `data2 : node_t *` : Node containing incorrect usage
 
   - `WRONG_TYPE`
-    * `data1 : node_t *` : Node containing lval
-    * `data2 : node_t *` : Node containing rval
+    * `data1 : node_t *` : Node containing incorreect usage
 
   - `CHAR_TO_X` and `STRING_TO_X`
     * `data1 : node_t *` : Node containing usage of char or string
 
   - `STRING_SIZE`
-    * `data1 : ` **TODO**
+    * `data1 : symbol_t *` : String symbol information
+    * `data2 : node_t *` : Node containing excessive size
+    * `data3 : int *` : Invalid size
 
   - `EXCESS_ARGS` and  `MISSING_ARGS`
     * `data1 : symbol_t *` : Function symbol information

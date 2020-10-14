@@ -195,4 +195,11 @@ node_t *create_function_call(node_t *identifier, node_t *args);
  */
 void check_correct_id_usage(node_t *usage, node_t *id, SymbolKind mode);
 
+/**
+ * @brief Returns the size of a string being generated from an expression
+ * @param node Root node for the expression
+ * @returns Resulting string size
+ */
+int get_resulting_string_size(node_t *node);
+
 #endif

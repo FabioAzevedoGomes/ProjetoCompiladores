@@ -339,9 +339,18 @@ void print_error(error_t *error)
             printf(" %s\n", reconstruct_function_declaration((symbol_t *)(error->data1)));
             break;
         case ERR_WRONG_TYPE:
-            printf("Assignment from incompatible types:\n");
-            printf(" %s = %s\n", reconstruct_node(((node_t *)(error->data1))), reconstruct_node(((node_t *)(error->data2))));
-            printf("[ERROR] lval has type %s, but rval has type %s\n", type_name(((node_t *)(error->data1))->type), type_name(((node_t *)(error->data2))->type));
+            if (((node_t *)(error->data1))->st_kind == CMD_TERNOP)
+            {
+                printf("Expression types in ternary operator are incompatible:\n");
+                printf(" %s : %s\n", reconstruct_node(((node_t *)(error->data1))->children), reconstruct_node(((node_t *)(error->data1))->children->brothers->brothers));
+                printf("True statement has type %s, but false statement has type %s\n", type_name(((node_t *)(error->data1))->children->type), type_name(((node_t *)(error->data1))->children->brothers->brothers->type));
+            }
+            else
+            {
+                printf("Assignment from incompatible types:\n");
+                printf(" %s\n", reconstruct_node(((node_t *)(error->data1))));
+                printf("[ERROR] lval has type %s, but rval has type %s\n", type_name(((node_t *)(error->data1))->children->type), type_name(((node_t *)(error->data1))->children->brothers->type));
+            }
             break;
         case ERR_STRING_TO_X:
             printf("No implicit conversion for STRING:\n");
@@ -352,7 +361,10 @@ void print_error(error_t *error)
             printf(" %s\n", reconstruct_node((node_t *)(error->data1)));
             break;
         case ERR_STRING_SIZE:
-            printf("Incorrect size for STRING\n"); // TODO
+            printf("Incorrect size being attributed to STRING:\n");
+            printf(" %s\n", reconstruct_node((node_t *)(error->data2)));
+            printf("[ERROR] %s has defined size %d, but rval expression has size %d\n", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->size, *((int *)(error->data3)));
+            printf("[ERROR] \"%s\" was declared on line %d", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->declaration_line);
             break;
         case ERR_MISSING_ARGS:
             printf("Too few arguments in function call:\n");
@@ -385,7 +397,7 @@ void print_error(error_t *error)
             break;
         case ERR_WRONG_PAR_RETURN:
             printf("Incompatible type for RETURN statement:\n");
-            printf(" return %s\n",reconstruct_node((node_t *)(error->data2)));
+            printf(" return %s\n", reconstruct_node((node_t *)(error->data2)));
             printf("[ERROR] Expected %s, but got expression of type %s\n", type_name(((symbol_t *)(error->data1))->type), type_name(((node_t *)(error->data2))->type));
             printf("[ERROR] Function was declared on line %d:\n", ((symbol_t *)(error->data1))->declaration_line);
             printf(" %s\n", reconstruct_function_declaration((symbol_t *)(error->data1)));

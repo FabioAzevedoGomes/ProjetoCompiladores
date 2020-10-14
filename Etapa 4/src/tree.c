@@ -742,6 +742,9 @@ node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
     node_t *attrib_node = NULL;
     error_t *status = NULL;
 
+    symbol_t *lval_symbol = NULL;
+    int string_size = 0;
+
     // Add lval as first child
     attrib_node = insert_child(operator, lval);
 
@@ -772,11 +775,53 @@ node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
         status = create_error(ERR_WRONG_TYPE);
 
         // Fill error data
-        status->data1 = (void *)lval;
-        status->data2 = (void *)rval;
+        status->data1 = (void *)attrib_node;
 
         // output error and exit
         print_error(status);
+    }
+
+    // Check if this is an attribution to a string
+    // Note: If no error was generated, then lval is also of type string
+    if (lval->type == TYPE_STRING)
+    {
+        // Get reference to rval symbol
+        status = find_id(lval->lexval->value.name, 1);
+
+        // No error was generated before so we can skip existance check
+        lval_symbol = ((symbol_t *)(status->data1));
+
+        // Free container
+        free(status);
+        status = NULL;
+
+        // Get size of resulting rval string
+        string_size = get_resulting_string_size(rval);
+
+        // Check if string has been initialized
+        if (lval_symbol->count == 0)
+        {
+            // If not, then only define it's count and size
+            lval_symbol->count = string_size;
+            lval_symbol->size = lval_symbol->count * type_size(lval_symbol->type);
+        }
+        else
+        {
+            // If it has, check if assignement respects initial size
+            if (lval_symbol->count < string_size)
+            {
+                // If not, generate error
+                status = create_error(ERR_STRING_SIZE);
+
+                // Fill data
+                status->data1 = (void *)lval_symbol;
+                status->data2 = (void *)rval;
+                status->data3 = (void *)&string_size;
+
+                // Output error and exit
+                print_error(status);
+            }
+        }
     }
 
     return attrib_node;
@@ -909,8 +954,8 @@ node_t *create_binop(node_t *operation, node_t *lval, node_t *rval)
         // If false statement is not compatible with true statement
         if ((new_type = infer_type(operation->children->type, rval->type)) == -1)
         {
-            // TODO What error is output here?
-            status = create_error(-1);
+            status = create_error(ERR_WRONG_TYPE);
+            status->data1 = (void *)binop_node;
 
             // Output error and exit
             print_error(status);
@@ -1271,6 +1316,8 @@ node_t *create_function_call(node_t *identifier, node_t *args)
     return function_call_node;
 }
 
+// TYPE AND ID CHECKING METHODS
+
 void check_correct_id_usage(node_t *usage, node_t *id, SymbolKind mode)
 {
     error_t *status = NULL;
@@ -1321,4 +1368,41 @@ void check_correct_id_usage(node_t *usage, node_t *id, SymbolKind mode)
         // Output error and exit
         print_error(status);
     }
+}
+
+int get_resulting_string_size(node_t *node)
+{
+    int length = 0;
+    error_t *status = NULL;
+
+    // The only situations where string size is known is on binop and identifiers/literals
+    switch (node->st_kind)
+    {
+    case CMD_OPERAND:
+        if (node->lexval->category == CAT_IDENTIFIER)
+        {
+            // If id, get symbol from table
+            status = find_id(node->lexval->value.name, 1);
+
+            // Get size (We can skip checking because no error was generated for this node)
+            length = ((symbol_t *)(status->data1))->count;
+        }
+        else
+        {
+            // If string literal, get size
+            length = strlen(node->lexval->value.string);
+        }
+
+        break;
+    case CMD_BINOP: // If binop, it is a concatenation of two strings
+
+        // Get both the string's length and sum them
+        length = get_resulting_string_size(node->children) + get_resulting_string_size(node->children->brothers);
+
+        break;
+    default:
+        break;
+    }
+
+    return length;
 }

@@ -196,8 +196,6 @@ void declare_symbol_list(st_entry_t *list, LanguageType type)
 
                 // Print error information
                 print_error(status);
-
-                // TODO Maybe here stop execution? Not sure how this will work yet
             }
         }
     }
@@ -209,6 +207,8 @@ void check_init_types(node_t *vars, LanguageType type)
 
     node_t *aux = NULL;     // Auxiliary pointer for traversing the list
     error_t *status = NULL; // Operation status
+
+    symbol_t *initializer_symbol = NULL;
 
     node_t *identifier = NULL;  // Pointer to the node of the initialized variable
     node_t *initializer = NULL; // Pointer to the node of the initializing value
@@ -245,6 +245,9 @@ void check_init_types(node_t *vars, LanguageType type)
                     // If symbol existed, update initializer node type
                     initializer->type = ((symbol_t *)(status->data1))->type;
 
+                    // Get symbol
+                    initializer_symbol = ((symbol_t *)(status->data1));
+
                     // Free error status
                     free(status);
                     status = NULL;
@@ -266,6 +269,25 @@ void check_init_types(node_t *vars, LanguageType type)
                 {
                     // Update the symbol type in the stack
                     ((symbol_t *)(status->data1))->type = new_type;
+
+                    // If type being initialized is a string
+                    if (type == TYPE_STRING)
+                    {
+                        // If using a literal
+                        if (initializer->lexval->category == CAT_LITERAL)
+                        {
+                            // Update amount and size
+                            ((symbol_t *)(status->data1))->count = strlen(initializer->lexval->value.string);
+                            ((symbol_t *)(status->data1))->size = ((symbol_t *)(status->data1))->count * type_size(TYPE_STRING);
+                        }
+                        else
+                        {
+                            // If using an ID
+                            // Update amount and size
+                            ((symbol_t *)(status->data1))->count = initializer_symbol->count;
+                            ((symbol_t *)(status->data1))->size = ((symbol_t *)(status->data1))->count * type_size(TYPE_STRING);
+                        }
+                    }
                 }
                 else
                 {
@@ -279,12 +301,9 @@ void check_init_types(node_t *vars, LanguageType type)
             {
                 // Create wrong type error
                 status = create_error(ERR_WRONG_TYPE);
-                status->data1 = (void *)identifier;  // Variable being initialized
-                status->data2 = (void *)initializer; // Value used in initializtion
+                status->data1 = (void *)vars;
 
                 print_error(status);
-
-                // TODO Stop execution here? not sure
             }
 
             // Move to next node
@@ -340,7 +359,7 @@ st_entry_t *make_param_list(st_entry_t *param, st_entry_t *list)
         param->next = list;
 
         ((symbol_t *)(param->data))->args = list;
-        ((symbol_t *)(param->data))->argument_count = ((symbol_t *)(list->data))->argument_count+1;
+        ((symbol_t *)(param->data))->argument_count = ((symbol_t *)(list->data))->argument_count + 1;
 
         // Return the list head pointer
         return param;
