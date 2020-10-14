@@ -683,7 +683,7 @@ node_t *create_input(node_t *identifier)
     if (((symbol_t *)(status->data1))->kind != KIND_IDENTIFIER)
     {
         // Create error
-        error = create_error(ERR_WRONG_PAR_INPUT);
+        error = create_error(((symbol_t *)(status->data1))->kind == KIND_VECTOR ? ERR_VECTOR : ERR_FUNCTION);
 
         // Fill data
         error->data1 = status->data1;      // Symbol being used incorrectly
@@ -773,7 +773,7 @@ node_t *create_output(node_t *operand)
     if (operand->type != TYPE_INT && operand->type != TYPE_FLOAT)
     {
         // Create error
-        status = create_error(ERR_WRONG_PAR_INPUT);
+        status = create_error(ERR_WRONG_PAR_OUTPUT);
 
         // Fill error data
         status->data1 = op_symbol;           // Symbol entry (Or NULL if it is a literal)
@@ -868,8 +868,7 @@ node_t *create_return(node_t *retval)
 
             // Fill error data
             status->data1 = current_function->data; // Declaration of function
-            status->data2 = (void *)return_node;    // Usage that caused the error
-            // TODO Maybe here add more data, like expected type
+            status->data2 = (void *)retval;    // Usage that caused the error
 
             // Print error and exit
             print_error(status);
@@ -937,7 +936,7 @@ node_t *create_shift(node_t *identifier, node_t *amount, node_t *operator)
         status = create_error(ERR_WRONG_PAR_SHIFT);
 
         // Fill error data
-        status->data1 = (void *)shift_node; // Incorrect usage that generated the error
+        status->data1 = (void *)(&(amount->lexval->value.integer)); // Incorrect usage that generated the error
 
         // Print error and exit
         print_error(status);
@@ -1037,8 +1036,8 @@ node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
         status = create_error(ERR_WRONG_TYPE);
 
         // Fill error data
-        status->data1 = (void *)attrib_node;
-        // TODO Maybe here add more error data
+        status->data1 = (void *)lval;
+        status->data2 = (void *)rval;
     }
 
     return attrib_node;
@@ -1048,8 +1047,6 @@ node_t *create_init(node_t *identifier, node_t *rval, node_t *operator)
 {
     // Create node for variable initialization
     node_t *init_node = NULL;
-    error_t *status = NULL;
-    symbol_t *symbol = NULL;
 
     // Add identifier as first child
     init_node = insert_child(operator, identifier);
@@ -1428,6 +1425,9 @@ node_t *create_function_call(node_t *identifier, node_t *args)
     // Insert argument list as the first child
     function_call_node = insert_child(identifier, args);
 
+    // Mark node as function call
+    function_call_node->st_kind = CMD_FUNCTION_CALL;
+
     // Get reference to identifier from symbol table
     status = find_id(identifier->lexval->value.name, 1);
 
@@ -1545,7 +1545,7 @@ node_t *create_function_call(node_t *identifier, node_t *args)
             aux_args = aux_args->children->brothers->brothers;
 
             break;
-        case CMD_FUNCTION_CALL: // Function call, 2 children
+        case CMD_FUNCTION_CALL: // Function call, 1 child
             if (status == NULL && aux_param != NULL)
             {
                 // Check if corresponding parameter has the same type
@@ -1563,7 +1563,7 @@ node_t *create_function_call(node_t *identifier, node_t *args)
                 }
             }
             // Move to next argument (3rd child)
-            aux_args = aux_args->children->brothers->brothers;
+            aux_args = aux_args->children->brothers;
 
             break;
         case CMD_UNOP: // Unary operatrion, 1 child

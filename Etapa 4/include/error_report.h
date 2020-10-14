@@ -43,4 +43,6 @@ error_t *create_error(int type);
  */
 void print_error(error_t *error);
 
+char *reconstruct_node(node_t *node);
+
 #endif

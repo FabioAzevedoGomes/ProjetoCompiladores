@@ -280,7 +280,7 @@ void check_init_types(node_t *vars, LanguageType type)
                 // Create wrong type error
                 status = create_error(ERR_WRONG_TYPE);
                 status->data1 = (void *)identifier;  // Variable being initialized
-                status->data1 = (void *)initializer; // Value used in initializtion
+                status->data2 = (void *)initializer; // Value used in initializtion
 
                 print_error(status);
 
@@ -334,30 +334,16 @@ st_entry_t *make_param_list(st_entry_t *param, st_entry_t *list)
     if (!initialized)
         init();
 
-    st_entry_t *aux = NULL; // Auxiliary pointer to traverse the list
-
     if (list != NULL)
     {
-        // Get reference to the first element in the list
-        aux = list;
 
-        // Traverse list
-        while (aux->next != NULL)
-        {
-            aux = aux->next;
-        }
+        param->next = list;
 
-        // Insert new param entry at the end of the list
-        aux->next = param;
-
-        // Update the argument pointer chain
-        ((symbol_t *)(aux->data))->args = param;
-
-        // Update argument count
-        ((symbol_t *)(list->data))->argument_count++;
+        ((symbol_t *)(param->data))->args = list;
+        ((symbol_t *)(param->data))->argument_count = ((symbol_t *)(list->data))->argument_count+1;
 
         // Return the list head pointer
-        return list;
+        return param;
     }
     else
     {
