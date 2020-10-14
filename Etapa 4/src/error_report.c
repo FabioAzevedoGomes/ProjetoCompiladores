@@ -334,7 +334,7 @@ void print_error(error_t *error)
             break;
         case ERR_WRONG_TYPE:
             printf("Assignment from incompatible types\n");
-            printf("[ERROR] lval has type %s, but rval has type %s", type_name(((node_t *)(error->data1))->type), type_name(((node_t *)(error->data2))->type));
+            printf("[ERROR] lval has type %s, but rval has type %s\n", type_name(((node_t *)(error->data1))->type), type_name(((node_t *)(error->data2))->type));
             break;
         case ERR_STRING_TO_X:
             printf("No implicit conversion for STRING:\n");

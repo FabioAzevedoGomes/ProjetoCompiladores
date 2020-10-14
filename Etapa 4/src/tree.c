@@ -234,6 +234,9 @@ node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statemen
 
         // Update type
         new_node->type = ((symbol_t *)(status->data1))->type;
+
+        // Free container
+        free(status);
     }
     else
     {
@@ -868,7 +871,7 @@ node_t *create_return(node_t *retval)
 
             // Fill error data
             status->data1 = current_function->data; // Declaration of function
-            status->data2 = (void *)retval;    // Usage that caused the error
+            status->data2 = (void *)retval;         // Usage that caused the error
 
             // Print error and exit
             print_error(status);
@@ -1038,6 +1041,9 @@ node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
         // Fill error data
         status->data1 = (void *)lval;
         status->data2 = (void *)rval;
+
+        // output error and exit
+        print_error(status);
     }
 
     return attrib_node;
