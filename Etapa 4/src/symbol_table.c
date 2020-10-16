@@ -15,12 +15,30 @@ symbol_t *create_symbol(lexical_value_t *lv, LanguageType type, SymbolKind kind,
     // Copy data from lexical value to a new struct
     lexical_value_t *symbol_lexval = (lexical_value_t *)malloc(sizeof(lexical_value_t));
     symbol_lexval->category = lv->category;
-    symbol_lexval->value.name = strdup(lv->value.name);
+
+    char *new_name = NULL;
+
+    if (lv->category == CAT_LITERAL)
+    {
+        if (type == TYPE_STRING)
+        {
+            new_name = strdup(lv->value.string);
+            symbol_lexval->value.string = new_name;
+        }
+        else
+            symbol_lexval->value = lv->value;
+    }
+    else
+    {
+        new_name = strdup(lv->value.name);
+        symbol_lexval->value.name = new_name;
+    }
+
     symbol_lexval->line = lv->line;
 
     // Create a new symbol data structure
     symbol_t *symbol = (symbol_t *)malloc(sizeof(symbol_t));
-    symbol->key = symbol_lexval->value.name;
+    symbol->key = get_symbol_name(lv, type);
     symbol->count = amount;
     symbol->data = symbol_lexval;
     symbol->kind = kind;
@@ -71,7 +89,7 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
                 entry_aux = entry;
                 entry = entry->next;
 
-            } while (entry != NULL);
+            } while (entry != NULL && status == NULL);
 
             // If reached the end without any errors
             if (status == NULL)
@@ -170,6 +188,9 @@ void free_symbol_table(symbol_table_t *st)
         // Get reference to the next entry
         entry_aux = entry->next;
 
+        // Free the key information
+        free(((symbol_t *)(entry->data))->key);
+
         // If entry is a function
         if (((symbol_t *)(entry->data))->kind == KIND_FUNCTION)
         {
@@ -182,6 +203,7 @@ void free_symbol_table(symbol_table_t *st)
             {
 
                 // Free symbol data
+                free(((symbol_t *)(param_aux->data))->key);
                 free_lexical_value(((symbol_t *)(param_aux->data))->data, ((symbol_t *)(param_aux->data))->type);
                 free((symbol_t *)(param_aux->data));
 
@@ -249,4 +271,43 @@ void print_symbol(symbol_t *symbol)
     printf("Symbol kind: %d\n", symbol->kind);
     printf("Symbol argument count: %d\n", symbol->argument_count);
     printf("========================\n");
+}
+
+char *get_symbol_name(lexical_value_t *lexval, LanguageType type)
+{
+    char *name = NULL;
+
+    if (lexval->category == CAT_LITERAL)
+    {
+        switch (type)
+        {
+        case TYPE_INT:
+            name = calloc(20, 1);
+            sprintf(name, "\"%d\"", lexval->value.integer);
+            return name;
+        case TYPE_FLOAT:
+            name = calloc(20, 1);
+            sprintf(name, "\"%f\"", lexval->value.floating);
+            return name;
+        case TYPE_STRING:
+            name = calloc(strlen(lexval->value.string) + 3, 1);
+            sprintf(name, "\"%s\"", lexval->value.string);
+            return name;
+        case TYPE_CHAR:
+            name = calloc(3, 1);
+            sprintf(name, "\"%c\"", lexval->value.character);
+            return name;
+        case TYPE_BOOL:
+            name = calloc(6, 1);
+            lexval->value.boolean ? sprintf(name, "true") : sprintf(name, "false");
+            return name;
+        default:
+            return NULL;
+        }
+    }
+    else
+    {
+        name = strdup(lexval->value.name);
+        return name;
+    }
 }

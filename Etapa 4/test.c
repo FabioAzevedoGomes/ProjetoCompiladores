@@ -3,7 +3,7 @@ int global_vec[20];
 float process_data(float data1, float data2)
 {
     float result <= 0;
-    result = data1 + data2;
+    result = data1 + data2 + 0;
     result = result * global_vec[1];
     return result;
 }

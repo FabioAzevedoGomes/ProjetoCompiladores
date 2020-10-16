@@ -65,6 +65,13 @@ void print_symbol_table(symbol_table_t *st);
  * @brief Prints symbol information
  * @param symbol Symbol being printed 
  */
-void print_symbol(symbol_t* symbol);
+void print_symbol(symbol_t *symbol);
+
+/**
+ * @brief Returns the name of the symbol
+ * @param lexval Lexical value 
+ * @param type Language type
+ */
+char *get_symbol_name(lexical_value_t *lexval, LanguageType type);
 
 #endif

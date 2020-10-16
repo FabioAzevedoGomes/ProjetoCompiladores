@@ -211,6 +211,7 @@ extern void exporta(void *arvore)
 node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statement st_kind, int declare)
 {
     error_t *status = NULL; // Current operation status
+    char *name = NULL;
 
     // Allocate memory for node
     node_t *new_node = (node_t *)malloc(sizeof(node_t));
@@ -242,6 +243,29 @@ node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statemen
     {
         // If not, just uupdate type
         new_node->type = type;
+    }
+
+    // If this is a literal that is being created
+    if (lexval != NULL && lexval->category == CAT_LITERAL)
+    {
+        name = get_symbol_name(lexval, type);
+
+        // Search in symbol table
+        status = find_id(name, 0);
+
+        if (status->error_type != 0)
+        {
+            // Symbol does not exist, declare it
+            insert_symbol((symbol_table_t *)(stack->top->data), create_symbol(lexval, type, KIND_NONE, 1, 0, NULL));
+        }
+        else
+        {
+            // Symbol exists, update it's data
+            ((symbol_t *)(status->data1))->declaration_line = lexval->line;
+        }
+
+        free(status);
+        free(name);
     }
 
     // On creation, node is completly disconnected from the tree

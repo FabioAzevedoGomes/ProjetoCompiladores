@@ -15,6 +15,8 @@ void init()
 
     // Sets current function to NULL (Global scope)
     current_function = NULL;
+
+    func_depth = 0;
 }
 
 void enter_scope()
@@ -29,10 +31,13 @@ void enter_scope()
     push((void *)st);
 
     // If entering a function
-    if (current_function != NULL)
+    if (current_function != NULL && func_depth == 0)
     {
         // Declare function parameters in local scope
         declare_params(((symbol_t *)(current_function->data))->args);
+
+        // Increment function "depth"
+        func_depth++;
     }
 }
 
@@ -48,20 +53,26 @@ void leave_scope()
     if (st != NULL)
     {
         // Debug
-        //printf("Leaving scope with symbol table: \n");
-        //print_symbol_table(st);
+        printf("Leaving scope with symbol table: \n");
+        print_symbol_table(st);
+        printf("\n\n");
 
         free_symbol_table(st);
     }
 
     // If leaving a function
-    if (current_function != NULL)
+    if (current_function != NULL && func_depth > 0)
     {
         // Free current function container (Not the actual function entry)
         free(current_function);
 
-        // Reset pointer
-        current_function = NULL;
+        // Decrement function "depth"
+        func_depth--;
+
+        // If back at global scope
+        if (func_depth == 0)
+            // Reset pointer
+            current_function = NULL;
     }
 }
 

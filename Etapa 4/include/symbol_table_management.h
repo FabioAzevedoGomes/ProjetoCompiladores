@@ -13,6 +13,7 @@
 // TABLE ACCESS
 
 st_entry_t *current_function; // Pointer to current function being analyzed
+int func_depth;               // Signals if function parameter declaration was already done
 
 /**
  * Initializes the stack and the global scope 
