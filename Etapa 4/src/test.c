@@ -1,4 +1,6 @@
+
 int global_vec[20];
+string vetor[20];
 
 float process_data(float data1, float data2)
 {
@@ -15,6 +17,8 @@ string main(int argc, char argv)
     string result <= "O resultado e ";
     string test <= result;
 
+    int i <= 0, z <= 10;
+
     test = "aaa" + "bbb";
 
     // Get user input
@@ -25,11 +29,20 @@ string main(int argc, char argv)
     // Check if less than 10
     if (var >= 10)
     {
-        output true;
+        while (i < z)
+            do
+            {
+                i = i + 1;
+            };
+        output 5.0e-2;
         //result = result + " maior q 10";
     }
     else
     {
+        for (i = 0 : i < z : i = i + 1)
+        {
+            var = var > 0 ? var - 1 : var - 2; // Concertei miseravi
+        };
         output false;
         //result = result + " menor q 10";
     };

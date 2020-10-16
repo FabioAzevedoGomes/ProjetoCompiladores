@@ -363,8 +363,8 @@ void print_error(error_t *error)
         case ERR_STRING_SIZE:
             printf("Incorrect size being attributed to STRING:\n");
             printf(" %s\n", reconstruct_node((node_t *)(error->data2)));
-            printf("[ERROR] %s has defined size %d, but rval expression has size %d\n", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->size, *((int *)(error->data3)));
-            printf("[ERROR] \"%s\" was declared on line %d", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->declaration_line);
+            printf("[ERROR] string \"%s\" has defined size %d, but rval expression has string size %d\n", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->size, *((int *)(error->data3)));
+            printf("[ERROR] string \"%s\" was declared on line %d\n", ((symbol_t *)(error->data1))->key, ((symbol_t *)(error->data1))->declaration_line);
             break;
         case ERR_MISSING_ARGS:
             printf("Too few arguments in function call:\n");

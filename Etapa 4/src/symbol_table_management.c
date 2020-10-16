@@ -53,9 +53,9 @@ void leave_scope()
     if (st != NULL)
     {
         // Debug
-        printf("Leaving scope with symbol table: \n");
-        print_symbol_table(st);
-        printf("\n\n");
+        //printf("Leaving scope with symbol table: \n");
+        //print_symbol_table(st);
+        //printf("\n\n");
 
         free_symbol_table(st);
     }

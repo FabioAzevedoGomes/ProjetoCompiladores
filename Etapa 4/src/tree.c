@@ -839,7 +839,7 @@ node_t *create_attrib(node_t *lval, node_t *rval, node_t *operator)
 
                 // Fill data
                 status->data1 = (void *)lval_symbol;
-                status->data2 = (void *)rval;
+                status->data2 = (void *)attrib_node;
                 status->data3 = (void *)&string_size;
 
                 // Output error and exit
@@ -942,7 +942,7 @@ node_t *create_binop(node_t *operation, node_t *lval, node_t *rval)
     if (rval->lexval->category == CAT_IDENTIFIER)
     {
         // Check for correct usage
-        check_correct_id_usage(binop_node, lval, lval->st_kind == CMD_FUNCTION_CALL ? KIND_FUNCTION : KIND_IDENTIFIER);
+        check_correct_id_usage(binop_node, rval, rval->st_kind == CMD_FUNCTION_CALL ? KIND_FUNCTION : KIND_IDENTIFIER);
     }
 
     // If the operation is a ternary operator

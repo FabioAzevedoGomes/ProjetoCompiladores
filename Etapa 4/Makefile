@@ -3,7 +3,7 @@ INC := include/
 SRC := src/
 DOC := doc/
 
-all: stack.o error_report.o st_management.o symbol_table.o tree.o types.o parser.tab.c lex.yy.c
+all: dirs stack.o error_report.o st_management.o symbol_table.o tree.o types.o parser.tab.c lex.yy.c
 	gcc -c ${SRC}main.c -o ${OBJ}main.o	-Wall
 	gcc -c ${INC}parser.tab.c -o ${OBJ}parser.tab.o
 	gcc -c ${SRC}lex.yy.c -o ${OBJ}lex.yy.o
@@ -33,10 +33,14 @@ st_management.o:
 symbol_table.o:
 	gcc -c ${SRC}symbol_table.c -o ${OBJ}symbol_table.o -I ${INC} -Wall
 
+dirs:
+	mkdir -p ${OBJ}
+	mkdir -p ${DOC}
+    
 test:
-	@cat -n test.c
-	@valgrind --leak-check=full --track-origins=yes ./etapa4 < test.c
-	@#./etapa4 < test.c
+	@cat -n ${SRC}test.c
+	@valgrind --leak-check=full --track-origins=yes ./etapa4 < ${SRC}test.c
+	@#./etapa4 < ${SRC}test.c
 
 clean:
 	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa4 ${DOC}*.output
