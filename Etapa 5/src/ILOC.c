@@ -1,5 +1,9 @@
 #include "ILOC.h"
 
+// Variables for keeping track of how many labels and registers have been generated
+static int label_count = 0;
+static int register_count = 0;
+
 iloc_t *create_iloc_command(ILOCop opcode, void *arg1, void *arg2, void *arg3)
 {
     // Allocate memoroy for command
@@ -59,9 +63,35 @@ iloc_list_t *add_command(int index, iloc_list_t *first, iloc_t *command)
     }
 }
 
+char *get_label()
+{
+    // Create name with current label count
+    char *label = malloc(floor(((float)label_count) / 10) + 3);
+    sprintf(label, "L%d", label_count);
+
+    // Update label count
+    label_count++;
+
+    // Return created name
+    return label;
+}
+
+char *get_register()
+{
+    // Create name with current register count
+    char *regname = malloc(floor(((float)register_count) / 10) + 3);
+    sprintf(regname, "r%d", register_count);
+
+    // Update regcount
+    register_count++;
+
+    // Returned created name
+    return regname;
+}
+
 void generate_code(node_t *root)
 {
-    // TODO Iterate tree, create iloc list and put in root node
+    // TODO
 }
 
 void output_code(iloc_list_t *first)

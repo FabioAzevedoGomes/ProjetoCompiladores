@@ -22,9 +22,6 @@ int main(int argc, char **argv)
     // Output generated code
     //output(((node_t *)arvore)->iloc_start);
 
-    // Export the AST
-    exporta(arvore);
-
     // Free the AST memory
     libera(arvore);
 

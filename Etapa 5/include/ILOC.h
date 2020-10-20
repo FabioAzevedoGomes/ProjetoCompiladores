@@ -7,6 +7,9 @@
 #define ILOC_H
 
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
+
 #include "types.h"
 
 /**
@@ -29,6 +32,20 @@ iloc_t *create_iloc_command(ILOCop opcode, void *arg1, void *arg2, void *arg3);
  * @returns Pointer to the new list
  */
 iloc_list_t *add_command(int index, iloc_list_t *first, iloc_t *command);
+
+/**
+ * @brief Generates a name for a new label, according to
+ * ILOC standard convention:
+ * L[0-9]+
+ */
+char *get_label();
+
+/**
+ * @brief Generates a name for a new register, according to
+ * ILOC standard conventions:
+ * r[0-9]+
+ */
+char *get_register();
 
 /**
  * @brief Runs through the AST generating the ILOC command list for the program  

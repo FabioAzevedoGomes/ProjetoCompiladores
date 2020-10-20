@@ -7,7 +7,7 @@ all: dirs stack.o error_report.o st_management.o symbol_table.o tree.o types.o I
 	gcc -c ${SRC}main.c -o ${OBJ}main.o	-I ${INC} -Wall
 	gcc -c ${INC}parser.tab.c -o ${OBJ}parser.tab.o
 	gcc -c ${SRC}lex.yy.c -o ${OBJ}lex.yy.o
-	gcc -o etapa5 ${OBJ}main.o ${OBJ}ILOC.o ${OBJ}types.o ${OBJ}stack.o ${OBJ}error_report.o ${OBJ}symbol_table_management.o ${OBJ}symbol_table.o ${OBJ}tree.o ${OBJ}lex.yy.o ${OBJ}parser.tab.o -lfl -Wall
+	gcc -o etapa5 ${OBJ}main.o ${OBJ}ILOC.o ${OBJ}types.o ${OBJ}stack.o ${OBJ}error_report.o ${OBJ}symbol_table_management.o ${OBJ}symbol_table.o ${OBJ}tree.o ${OBJ}lex.yy.o ${OBJ}parser.tab.o -lfl -lm -Wall
 
 parser.tab.c:
 	bison -d -v --output=${INC}parser.tab.c ${SRC}parser.y --report-file ${DOC}parser.output
@@ -42,8 +42,9 @@ dirs:
     
 test:
 	@cat -n ${SRC}test.c
-	@valgrind --leak-check=full --track-origins=yes ./etapa5 < ${SRC}test.c
-	@#./etapa5 < ${SRC}test.c
+	@#valgrind --leak-check=full --track-origins=yes ./etapa5 < ${SRC}test.c
+	@./etapa5 < ${SRC}test.c > output.iloc
+	@python3 ilocsim.py output.iloc
 
 clean:
-	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa5 ${DOC}*.output
+	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa5 ${DOC}*.output *.iloc
