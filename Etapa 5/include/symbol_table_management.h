@@ -117,4 +117,9 @@ st_entry_t *declare_function(st_entry_t *function, st_entry_t *params, int globa
  */
 void declare_params(st_entry_t *params);
 
+/**
+ * @brief Returns a reference to the global symbol table
+ */
+symbol_table_t *get_global_symbol_table();
+
 #endif

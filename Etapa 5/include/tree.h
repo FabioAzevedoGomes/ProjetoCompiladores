@@ -6,6 +6,7 @@
 
 #include "types.h"
 #include "symbol_table_management.h"
+#include "ILOC.h"
 
 // TREE MEMORY MANAGEMENT FUNCTIONS
 

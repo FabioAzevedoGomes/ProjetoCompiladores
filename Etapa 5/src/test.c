@@ -1,10 +1,9 @@
 
 int global_vec[20];
-string vetor[20];
 
 float process_data(float data1, float data2)
 {
-    float result <= 0;
+    float result <= 0, abc <= 1;
     result = data1 + data2 + 0;
     result = result * global_vec[1];
     return result;
@@ -13,7 +12,8 @@ float process_data(float data1, float data2)
 string main(int argc, char argv)
 {
     float var <= argc;
-    int user_input <= 0;
+    int user_input <= 0, xax <= 2;
+    int sss <= xax;
     string result <= "O resultado e ";
     string test <= result;
 
@@ -41,7 +41,9 @@ string main(int argc, char argv)
     {
         for (i = 0 : i < z : i = i + 1)
         {
-            var = var > 0 ? var - 1 : var - 2; // Concertei miseravi
+            {
+                var = var > 0 ? var - 1 : var - 2; // Concertei miseravi
+            };
         };
         output false;
         //result = result + " menor q 10";

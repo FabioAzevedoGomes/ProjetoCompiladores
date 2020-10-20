@@ -1,11 +1,13 @@
 #include "symbol_table.h"
 
-symbol_table_t *create_symbol_table()
+symbol_table_t *create_symbol_table(int base_address, int global)
 {
     // Allocate memory for a new (empty) symbol table
     symbol_table_t *new_symbol_table = (symbol_table_t *)malloc(sizeof(symbol_table_t));
     new_symbol_table->size = 0;
     new_symbol_table->first = NULL;
+    new_symbol_table->current_address = base_address;
+    new_symbol_table->global = global;
 
     return new_symbol_table;
 }
@@ -63,7 +65,7 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
     st_entry_t *entry = NULL;     // An entry in the symbol table
     st_entry_t *entry_aux = NULL; // Auxiliary pointer for the symbol table
 
-    // Only inser symbols in tables that exist
+    // Only insert symbols in tables that exist
     if (st != NULL)
     {
         // Get reference to first symbol in the list
@@ -99,6 +101,12 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
 
                 // Update symbol table counter
                 st->size++;
+
+                // Update symbol address
+                symbol->address = st->current_address;
+
+                // Update symbol table current address
+                st->current_address += symbol->size;
             }
         }
         else
@@ -108,6 +116,12 @@ error_t *insert_symbol(symbol_table_t *st, symbol_t *symbol)
 
             // Update symbol table counter
             st->size++;
+
+            // Update symbol address
+            symbol->address = st->current_address;
+
+            // Update symbol table current address
+            st->current_address += symbol->size;
         }
     }
 
@@ -232,30 +246,19 @@ void print_symbol_table(symbol_table_t *st)
 {
 
     st_entry_t *aux = st->first;
-    st_entry_t *par_aux = NULL;
+
+    // Print global status
+    if (st->global)
+        printf("\n ========== This is the global symbol table ==========\n");
+
+    // Print table address info
+    printf("Current address: %d\n", st->current_address);
 
     // Iterate symbol table
     while (aux != NULL)
     {
         // Print symbol info
         print_symbol((symbol_t *)(aux->data));
-
-        // If it is a function, print arguments as well
-        if (((symbol_t *)(aux->data))->kind == KIND_FUNCTION)
-        {
-            printf("Arguments:\n");
-            par_aux = ((symbol_t *)(aux->data))->args;
-
-            // Print all parameters
-            while (par_aux != NULL)
-            {
-                // Print param info
-                print_symbol((symbol_t *)(par_aux->data));
-
-                // Move to next parameter
-                par_aux = par_aux->next;
-            }
-        }
 
         // Move to next entry
         aux = aux->next;
@@ -266,10 +269,12 @@ void print_symbol(symbol_t *symbol)
 {
     printf("========================\n");
     printf("Symbol key: %s\n", symbol->key);
-    printf("Symbol type: %d\n", symbol->type);
+    printf("Symbol type: %s\n", type_name(symbol->type));
     printf("Declared on line: %d\n", symbol->declaration_line);
     printf("Symbol kind: %d\n", symbol->kind);
     printf("Symbol argument count: %d\n", symbol->argument_count);
+    printf("Symbol size: %d\n", symbol->size);
+    printf("Symbol address: %d\n", symbol->address);
     printf("========================\n");
 }
 

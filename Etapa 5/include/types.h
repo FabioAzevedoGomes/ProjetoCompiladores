@@ -170,6 +170,8 @@ typedef struct symbol_data
 
     lexical_value_t *data; // Data for this symbol
 
+    int address; // Address in memory for this symbol
+
 } symbol_t;
 
 /**
@@ -179,6 +181,10 @@ typedef struct symbol_table_handler
 {
     int size;          // Number of entries in the symbol table
     st_entry_t *first; // First entry in the symbol table
+
+    int current_address; // Current address for this symbol table
+
+    int global; // If this symbol table is global or not
 
 } symbol_table_t;
 

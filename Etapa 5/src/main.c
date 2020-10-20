@@ -16,9 +16,6 @@ int main(int argc, char **argv)
     // Parse input file
     int ret = yyparse();
 
-    // Generate ILOC code based on the generated AST
-    generate_code((node_t *)arvore);
-
     // Output generated code
     //output(((node_t *)arvore)->iloc_start);
 

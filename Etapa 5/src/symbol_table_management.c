@@ -24,21 +24,32 @@ void enter_scope()
     if (!initialized)
         init();
 
-    // Creates a new symbol table
-    symbol_table_t *st = create_symbol_table();
+    // The new symbol table
+    symbol_table_t *st = NULL;
+
+    // If entring a function
+    if (current_function != NULL && func_depth == 0)
+    {
+        // Creates a new symbol table with address at 0 (at the start of the function frame)
+        st = create_symbol_table(0, 0);
+    }
+    // If entering an un-named scope
+    else
+    {
+        // Creates a new symbol table with address depending on last symbol table current address
+        st = create_symbol_table(((symbol_table_t *)(stack->top->data))->current_address, 0);
+    }
 
     // Pushes it to the stack
     push((void *)st);
 
     // If entering a function
     if (current_function != NULL && func_depth == 0)
-    {
         // Declare function parameters in local scope
         declare_params(((symbol_t *)(current_function->data))->args);
 
-        // Increment function "depth"
-        func_depth++;
-    }
+    // Increment function "depth"
+    func_depth++;
 }
 
 void leave_scope()
@@ -49,30 +60,36 @@ void leave_scope()
     // Pop symbol table from the stack
     symbol_table_t *st = (symbol_table_t *)pop();
 
-    // Free symbol table memory
-    if (st != NULL)
-    {
-        // Debug
-        //printf("Leaving scope with symbol table: \n");
-        //print_symbol_table(st);
-        //printf("\n\n");
-
-        free_symbol_table(st);
-    }
-
     // If leaving a function
-    if (current_function != NULL && func_depth > 0)
+    if (current_function != NULL && func_depth == 1)
     {
         // Free current function container (Not the actual function entry)
         free(current_function);
-
-        // Decrement function "depth"
-        func_depth--;
 
         // If back at global scope
         if (func_depth == 0)
             // Reset pointer
             current_function = NULL;
+    }
+    else
+    {
+        // If leaving unnamed scope, update address
+        if (!st->global)
+            ((symbol_table_t *)(stack->top->data))->current_address = st->current_address;
+    }
+
+    // Decrement function "depth"
+    func_depth--;
+
+    // Free symbol table memory
+    if (st != NULL)
+    {
+        // Debug
+        printf("Leaving scope with symbol table: \n");
+        print_symbol_table(st);
+        printf("\n\n");
+
+        free_symbol_table(st);
     }
 }
 
@@ -186,8 +203,9 @@ void declare_symbol_list(st_entry_t *list, LanguageType type)
         // Travese the entire list
         for (aux = list; aux != NULL && status == NULL;)
         {
-            // Update symbol type
+            // Update symbol type and size
             ((symbol_t *)(aux->data))->type = type;
+            ((symbol_t *)(aux->data))->size = ((symbol_t *)(aux->data))->count * type_size(type);
 
             // Try to insert symbol
             if ((status = insert_symbol(((entry_t *)(stack->top))->data, aux->data)) == NULL)
@@ -278,8 +296,9 @@ void check_init_types(node_t *vars, LanguageType type)
                 // Check return status
                 if (status->error_type == 0)
                 {
-                    // Update the symbol type in the stack
+                    // Update the symbol type and size in the stack
                     ((symbol_t *)(status->data1))->type = new_type;
+                    ((symbol_t *)(status->data1))->size = type_size(new_type);
 
                     // If type being initialized is a string
                     if (type == TYPE_STRING)
@@ -299,6 +318,12 @@ void check_init_types(node_t *vars, LanguageType type)
                             ((symbol_t *)(status->data1))->size = ((symbol_t *)(status->data1))->count * type_size(TYPE_STRING);
                         }
                     }
+
+                    // Update symbol address
+                    ((symbol_t *)(status->data1))->address = ((symbol_table_t *)(stack->top->data))->current_address;
+
+                    // Update the symbol table address counter
+                    ((symbol_table_t *)(stack->top->data))->current_address += ((symbol_t *)(status->data1))->size;
                 }
                 else
                 {
@@ -450,4 +475,9 @@ void declare_params(st_entry_t *params)
         // Move to next parameter
         aux = aux->next;
     }
+}
+
+symbol_table_t *get_global_symbol_table()
+{
+    // TODO
 }

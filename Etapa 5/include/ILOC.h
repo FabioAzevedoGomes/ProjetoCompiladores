@@ -48,12 +48,6 @@ char *get_label();
 char *get_register();
 
 /**
- * @brief Runs through the AST generating the ILOC command list for the program  
- * @param root Root of the AST
- */
-void generate_code(node_t *root);
-
-/**
  * @brief Outputs the code in ILOC syntax to stdout
  * @param first First command in the list
  */

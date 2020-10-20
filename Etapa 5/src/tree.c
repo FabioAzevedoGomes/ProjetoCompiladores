@@ -212,6 +212,7 @@ node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statemen
 {
     error_t *status = NULL; // Current operation status
     char *name = NULL;
+    int size = 1;
 
     // Allocate memory for node
     node_t *new_node = (node_t *)malloc(sizeof(node_t));
@@ -256,7 +257,12 @@ node_t *create_lexical_node(lexical_value_t *lexval, LanguageType type, Statemen
         if (status->error_type != 0)
         {
             // Symbol does not exist, declare it
-            insert_symbol((symbol_table_t *)(stack->top->data), create_symbol(lexval, type, KIND_NONE, 1, 0, NULL));
+            // If this is a string, update size
+            if (type == TYPE_STRING)
+            {
+                size = strlen(lexval->value.string);
+            }
+            insert_symbol((symbol_table_t *)(stack->top->data), create_symbol(lexval, type, KIND_NONE, size, 0, NULL));
         }
         else
         {

@@ -2,8 +2,8 @@
 
 void stack_init()
 {
-    // Create symbol table for global scope
-    symbol_table_t *global_scope = create_symbol_table();
+    // Create symbol table for global scope (base address = 0, global = 1)
+    symbol_table_t *global_scope = create_symbol_table(0, 1);
 
     // Create stack entry
     entry_t *stack_entry = (entry_t *)malloc(sizeof(entry_t));

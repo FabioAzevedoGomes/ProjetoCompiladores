@@ -89,11 +89,6 @@ char *get_register()
     return regname;
 }
 
-void generate_code(node_t *root)
-{
-    // TODO
-}
-
 void output_code(iloc_list_t *first)
 {
     iloc_list_t *aux;

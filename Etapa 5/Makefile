@@ -42,9 +42,9 @@ dirs:
     
 test:
 	@cat -n ${SRC}test.c
-	@#valgrind --leak-check=full --track-origins=yes ./etapa5 < ${SRC}test.c
-	@./etapa5 < ${SRC}test.c > output.iloc
-	@python3 ilocsim.py output.iloc
+	@valgrind --leak-check=full --track-origins=yes ./etapa5 < ${SRC}test.c
+	@#./etapa5 < ${SRC}test.c > output.iloc
+	@#python3 ilocsim.py output.iloc
 
 clean:
 	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa5 ${DOC}*.output *.iloc

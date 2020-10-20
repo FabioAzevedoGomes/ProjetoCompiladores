@@ -17,9 +17,11 @@
 
 /**
  * @brief Creates a new symbol table
+ * @param base  Base address for the new symbol table
+ * @param global Whether this is the global symbol table 
  * @returns Pointer to the created symbol table
  */
-symbol_table_t *create_symbol_table();
+symbol_table_t *create_symbol_table(int base, int global);
 
 /**
  * @brief Creates a new symbol using the provided data
