@@ -19,6 +19,13 @@ extern void libera(void *arvore)
     delete (Node *)arvore;
 }
 
+extern void export_code(void *arvore)
+{
+    // Only export code for trees that exist
+    if (arvore != NULL)
+        std::cout << ((Node *)arvore)->exportCode() << std::endl;
+}
+
 // CONSTRUCTOR AND DESTRUCTOR
 
 Manager::Manager()
@@ -282,12 +289,6 @@ void Manager::addToVarList(Symbol *symbol, Node *node)
 }
 
 // AST MANAGEMENT
-
-Node *Manager::getAST()
-{
-    // Return the current AST
-    return Manager::AST;
-}
 
 // OPERAND NODES
 

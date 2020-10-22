@@ -31,7 +31,8 @@ private:
 
     Node *next_elem; // Next element when this node is part of a list
 
-    Tac *code; // TAC Code generated for this node
+    Tac *code;        // TAC Code generated for this node
+    std::string temp; // Name of the temporary register synthesized for this node
 
 public:
     /**
@@ -75,6 +76,12 @@ public:
      */
     std::string exportAllEdges();
 
+    /**
+     * @brief Exports this node's code as a string
+     * @returns String containing exported code
+     */
+    std::string exportCode();
+
     // SETTERS
 
     /**
@@ -105,6 +112,11 @@ public:
      * @brief Insersts another node next to this onde, making a list of nodes
      */
     void insertNext(Node *next);
+
+    /**
+     * @brief Sets this node's temporary register 
+     */
+    void setTemp(std::string temp);
 
     // GETTERS
 

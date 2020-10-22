@@ -9,6 +9,9 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 
+#include <unordered_map>
+#include <string>
+
 #define SHIFT_MAX 16   // Max shift amount
 #define MAX_CHILDREN 5 // Maximum number of children in a node
 
@@ -66,6 +69,102 @@ typedef enum
     ST_VECTOR_ACCESS         // An access to a vector position
 
 } Statement;
+
+// Instruction codes for ILOC intermediate code language
+typedef enum
+{
+    ILOC_NOP, // NOP
+    // Arithmetics
+    ILOC_ADD,   // r1, r2 => r3 | r3 = r1 + r2
+    ILOC_SUB,   // r1, r2 => r3 | r3 = r1 - r2
+    ILOC_MULT,  // r1, r2 => r3 | r3 = r1 * r2
+    ILOC_DIV,   // r1, r2 => r3 | r3 = r1 / r2
+    ILOC_ADDI,  // r1, c2 => r3 | r3 = r1 + c2
+    ILOC_SUBI,  // r1, c2 => r3 | r3 = r1 - c2
+    ILOC_RSUBI, // r1, c2 => r3 | r3 = c2 - r1
+    ILOC_MULTI, // r1, c2 => r3 | r3 = r1 * c2
+    ILOC_DIVI,  // r1, c2 => r3 | r3 = r1 / c2
+    ILOC_RDIVI, // r1, c2 => r3 | r3 = c2 / r1
+    // Shifts
+    ILOC_LSHIFT,  // r1, r2 => r3 | r3 = r1 << r2
+    ILOC_LSHIFTI, // r1, c2 => r3 | r3 = r1 << c2
+    ILOC_RSHIFT,  // r1, r2 => r3 | r3 = r1 >> r2
+    ILOC_RSHIFTI, // r1, c2 => r3 | r3 = r1 >> c2
+    // Logic
+    ILOC_AND,  // r1, r2 => r3 | r3 = r1 && r2
+    ILOC_ANDI, // r1, c2 => r3 | r3 = r1 && c2
+    ILOC_OR,   // r1, r2 => r3 | r3 = r1 || r2
+    ILOC_ORI,  // r1, c2 => r3 | r3 = r1 || c2
+    ILOC_XOR,  // r1, r2 => r3 | r3 = r1 xor r2
+    ILOC_XORI, // r1, c2 => r3 | r3 = r1 xor c2
+    // Loads
+    ILOC_LOAD,   // r1     => r2 | r2 = Mem(r1)
+    ILOC_LOADI,  // c1     => r2 | r2 = Mem(c1)
+    ILOC_LOADAI, // r1, c2 => r3 | r3 = Mem(r1 + c2)
+    ILOC_LOADA0, // r1, r2 => r3 | r3 = Mem(r1 + r2)
+    // Stores
+    ILOC_STORE,   // r1 => r2     | Mem(r2) = r1
+    ILOC_STOREAI, // r1 => r2, c3 | Mem(r2 + c3) = r1
+    ILOC_STOREAO, // r1 => r2, r3 | Mem(r2 + r3) = r1
+    // Copy
+    ILOC_I2I, // r1 => r2 || Mem(r2) = Mem(r1)
+    // Compares
+    ILOC_CMP_LT, // r1, r2 => r3 | r3 = (r1 <  r2)? true : false
+    ILOC_CMP_LE, // r1, r2 => r3 | r3 = (r1 <= r2)? true : false
+    ILOC_CMP_EQ, // r1, r2 => r3 | r3 = (r1 == r2)? true : false
+    ILOC_CMP_GE, // r1, r2 => r3 | r3 = (r1 >= r2)? true : false
+    ILOC_CMP_GT, // r1, r2 => r3 | r3 = (r1 >  r2)? true : false
+    ILOC_CMP_NE, // r1, r2 => r3 | r3 = (r1 != r2)? true : false
+    // Jumps
+    ILOC_CBR,   // r1 => l2, l3 | PC = (r1 == true)? Address(l2) | Address(l3)
+    ILOC_JUMPI, // l1           | PC = Address(l1)
+    ILOC_JUMP   // r1           | PC = r1
+
+} ILOCop;
+
+// Instruction names
+const std::unordered_map<ILOCop, std::string> opname = {
+
+    {ILOC_NOP, "nop"},
+    {ILOC_ADD, "add"},
+    {ILOC_SUB, "sub"},
+    {ILOC_MULT, "mult"},
+    {ILOC_DIV, "div"},
+    {ILOC_ADDI, "addI"},
+    {ILOC_SUBI, "subI"},
+    {ILOC_RSUBI, "rsubI"},
+    {ILOC_MULTI, "multI"},
+    {ILOC_DIVI, "divI"},
+    {ILOC_RDIVI, "rdivI"},
+    {ILOC_LSHIFT, "lshift"},
+    {ILOC_LSHIFTI, "lshiftI"},
+    {ILOC_RSHIFT, "rshift"},
+    {ILOC_RSHIFTI, "rshiftI"},
+    {ILOC_AND, "and"},
+    {ILOC_ANDI, "andI"},
+    {ILOC_OR, "or"},
+    {ILOC_ORI, "orI"},
+    {ILOC_XOR, "xor"},
+    {ILOC_XORI, "xorI"},
+    {ILOC_LOAD, "load"},
+    {ILOC_LOADI, "loadI"},
+    {ILOC_LOADAI, "laodAI"},
+    {ILOC_LOADA0, "loadA0"},
+    {ILOC_STORE, "store"},
+    {ILOC_STOREAI, "storeAI"},
+    {ILOC_STOREAO, "storeAO"},
+    {ILOC_I2I, "i2i"},
+    {ILOC_CMP_LT, "cmp_LT"},
+    {ILOC_CMP_LE, "cmp_LE"},
+    {ILOC_CMP_EQ, "cmp_EQ"},
+    {ILOC_CMP_GE, "cmp_GE"},
+    {ILOC_CMP_GT, "cmp_GT"},
+    {ILOC_CMP_NE, "cmp_NE"},
+    {ILOC_CBR, "cbr"},
+    {ILOC_JUMPI, "jumpI"},
+    {ILOC_JUMP, "jump"}
+
+};
 
 // UTILITY FUNCTIONS
 

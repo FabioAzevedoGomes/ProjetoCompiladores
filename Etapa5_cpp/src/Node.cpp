@@ -7,6 +7,7 @@ Node::Node(Token *lexval_, Type type_, Statement statement_)
     this->statement = statement_;
     this->next_cmd = NULL;
     this->next_elem = NULL;
+    this->code = NULL;
 
     // Initialize empty vector
     this->children.resize(0);
@@ -25,6 +26,10 @@ Node::~Node()
     // Delete next command after this node, if it exists
     if (this->next_cmd != NULL)
         delete (this->next_cmd);
+
+    // Delete code for this command, if it exists
+    if (this->code != NULL)
+        delete (this->code);
 
     // Delete lexical value
     delete (this->lexval);
@@ -177,6 +182,17 @@ std::string Node::exportAllEdges()
     return output.str();
 }
 
+std::string Node::exportCode()
+{
+    std::string code = "";
+
+    // Export the code if there is any associated
+    if (this->code != NULL)
+        code = this->code->getCodeString();
+
+    return code;
+}
+
 // SETTERS
 
 void Node::insertChild(Node *child)
@@ -205,6 +221,11 @@ void Node::setKind(Statement statement)
 void Node::insertNext(Node *next)
 {
     this->next_elem = next;
+}
+
+void Node::setTemp(std::string temp)
+{
+    this->temp = temp;
 }
 
 // GETTERS

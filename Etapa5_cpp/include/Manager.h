@@ -22,12 +22,12 @@
 // PROVIDED EXTERN FUNCTIONS FOR MAIN.C
 extern void libera(void *arvore);
 extern void exporta(void *arvore);
+extern void export_code(void *arvore);
 
 class Manager
 {
 
 private:
-    Node *AST;                       // The AST being constructed during analysis
     std::stack<SymbolTable *> stack; // The Stack used for maintaining scope-specific symbol tables
 
     Symbol *function; // The function representing the current scope
@@ -99,11 +99,6 @@ public:
     void addToVarList(Symbol *symbol, Node *node = NULL);
 
     // AST MANAGEMENT
-
-    /**
-     * @brief Returns a reference to the currently constructed AST 
-     */
-    Node *getAST();
 
     // OPERAND NODES
 

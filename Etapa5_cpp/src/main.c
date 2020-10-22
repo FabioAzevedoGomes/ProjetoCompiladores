@@ -8,6 +8,7 @@ extern int yylex_destroy(void);
 void *arvore = NULL;
 void exporta(void *arvore);
 void libera(void *arvore);
+void export_code(void *arvore);
 
 int main(int argc, char **argv)
 {
@@ -16,6 +17,9 @@ int main(int argc, char **argv)
 
     // Export the AST
     exporta(arvore);
+
+    // Export the ILOC code
+    export_code(arvore);
 
     // Free the AST memory
     libera(arvore);
