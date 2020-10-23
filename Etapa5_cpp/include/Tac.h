@@ -16,6 +16,7 @@
 #define TAC_H
 
 #include "Type.h"
+#include "Manager.h"
 
 #include <string>
 #include <sstream>
@@ -57,10 +58,10 @@ public:
      * @brief Class constructor
      * @param opcode_ Operation code for this instruction
      * @param arg1_   First argument
-     * @param arg2_   Second argument
-     * @param arg3_   Third argument
+     * @param arg2_   Second argument, none by default
+     * @param arg3_   Third argument, none by default
      */
-    Tac(ILOCop opcode_, std::string arg1_, std::string arg2_, std::string arg3_);
+    Tac(ILOCop opcode_, std::string arg1_, std::string arg2_ = "", std::string arg3_ = "");
 
     /**
      * @brief Class destructor 

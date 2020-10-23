@@ -1,4 +1,5 @@
 
+int vetorzao[2];
 int global_vec[20];
 
 float process_data(float data1, float data2)
@@ -26,7 +27,7 @@ string main(int argc, char argv)
 
     test = "aaa" + "bbb";
 
-    foo(1,2,'h');
+    foo(1, 2, 'h');
 
     // Get user input
     input user_input;

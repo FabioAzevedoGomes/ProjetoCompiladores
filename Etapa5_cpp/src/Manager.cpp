@@ -1,5 +1,7 @@
 #include "Manager.h"
 
+std::stack<SymbolTable *> Manager::stack;
+
 // EXTERN FUNCTIONS
 
 extern void exporta(void *arvore)
@@ -21,9 +23,7 @@ extern void libera(void *arvore)
 
 extern void export_code(void *arvore)
 {
-    // Only export code for trees that exist
-    if (arvore != NULL)
-        std::cout << ((Node *)arvore)->exportCode() << std::endl;
+    std::cout << ((Node *)arvore)->exportCode() << std::endl;
 }
 
 // CONSTRUCTOR AND DESTRUCTOR
@@ -34,7 +34,7 @@ Manager::Manager()
     SymbolTable *global_scope = new SymbolTable(0, true);
 
     // Insert in the stack base
-    stack.push(global_scope);
+    Manager::stack.push(global_scope);
 
     this->function = NULL;
     this->depth = 0;
@@ -63,11 +63,11 @@ void Manager::enterScope()
     else
     {
         // Create symbol table with last scope's address
-        new_scope = new SymbolTable(stack.top()->getAddress());
+        new_scope = new SymbolTable(Manager::stack.top()->getAddress());
     }
 
     // Add it to the stack
-    stack.push(new_scope);
+    Manager::stack.push(new_scope);
 
     // If entering a function
     if (this->depth == 0)
@@ -88,38 +88,41 @@ void Manager::enterScope()
 
 void Manager::leaveScope()
 {
-    // Top symbol table (Current scope)
-    SymbolTable *top = stack.top();
-
-    // Remove the symbol table from the top
-    stack.pop();
-
-    // If leaving a function
-    if (this->depth == 1)
+    if (!Manager::stack.empty())
     {
-        // Reser function pointer
-        function = NULL;
-    }
-    // If leaving unnamed scope that is not global
-    else if (this->depth > 0)
-    {
-        // Update previous scope's current address to leaving scope's address
-        stack.top()->setAddress(top->getAddress());
-    }
+        // Top symbol table (Current scope)
+        SymbolTable *top = Manager::stack.top();
 
-    // If leaving scope went ok
-    if (top != NULL)
-    {
-        // Debug
-        //std::cout << " = Leaving scope with symbol table = " << std::endl
-        //          << top->toString() << std::endl;
+        // Remove the symbol table from the top
+        Manager::stack.pop();
 
-        // Free it's memory
-        delete (top);
+        // If leaving a function
+        if (this->depth == 1)
+        {
+            // Reser function pointer
+            function = NULL;
+        }
+        // If leaving unnamed scope that is not global
+        else if (this->depth > 0)
+        {
+            // Update previous scope's current address to leaving scope's address
+            Manager::stack.top()->setAddress(top->getAddress());
+        }
+
+        // If leaving scope went ok
+        if (top != NULL)
+        {
+            // Debug
+            //std::cout << " = Leaving scope with symbol table = " << std::endl
+            //          << top->toString() << std::endl;
+
+            // Free it's memory
+            delete (top);
+        }
+
+        // Lower current scope depth
+        this->depth--;
     }
-
-    // Lower current scope depth
-    this->depth--;
 }
 
 // SYMBOL TABLE MANAGEMENT
@@ -127,7 +130,7 @@ void Manager::leaveScope()
 void Manager::declareSymbol(Symbol *symbol)
 {
     // Current scope's symbol table
-    SymbolTable *current = stack.top();
+    SymbolTable *current = Manager::stack.top();
     try
     {
         // Try to delcare symbol
@@ -229,10 +232,10 @@ Symbol *Manager::getSymbol(Token *lexval)
     try
     {
         // If stack is not empty
-        if (!stack.empty())
+        if (!Manager::stack.empty())
         {
             // Try getting the symbol from the local scope
-            symbol = stack.top()->getSymbol(lexval->getName());
+            symbol = Manager::stack.top()->getSymbol(lexval->getName());
         }
         else
         {
@@ -263,16 +266,16 @@ Symbol *Manager::getSymbol(Token *lexval)
         else
         {
             // Get reference to top
-            table = stack.top();
+            table = Manager::stack.top();
 
             // Pop top
-            stack.pop();
+            Manager::stack.pop();
 
             // Check on lower scopes
             symbol = Manager::getSymbol(lexval);
 
             // When returning, replace stack top
-            stack.push(table);
+            Manager::stack.push(table);
         }
     }
 
@@ -455,6 +458,9 @@ Node *Manager::createVectorAccess(Node *id, Node *index)
 
     // Check for indexing expression type compatibility
     checkCompatibility(TYPE_INT, index->getType(), vec_access_node);
+
+    // Create intermediate code for the node
+    vec_access_node->generateCode();
 
     return vec_access_node;
 }

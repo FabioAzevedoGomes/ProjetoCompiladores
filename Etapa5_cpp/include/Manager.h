@@ -10,6 +10,13 @@
 #ifndef MANAGER_H
 #define MANAGER_H
 
+// Forward declaration of domain classes
+class Token;
+class Node;
+class Symbol;
+class SymbolTable;
+class Tac;
+
 #include "Node.h"
 #include "SymbolTable.h"
 #include "errors.h"
@@ -28,7 +35,7 @@ class Manager
 {
 
 private:
-    std::stack<SymbolTable *> stack; // The Stack used for maintaining scope-specific symbol tables
+    static std::stack<SymbolTable *> stack; // The Stack used for maintaining scope-specific symbol tables
 
     Symbol *function; // The function representing the current scope
     int depth;        // Scope "depth", 0  when inside global scope
@@ -90,7 +97,7 @@ public:
      * @param lexval Symbol Lexical value
      * @returns Reference to the symbol 
      */
-    Symbol *getSymbol(Token *lexval);
+    static Symbol *getSymbol(Token *lexval);
 
     /**
      * @brief Adds a symbol to the variables list, and a node to the nodes

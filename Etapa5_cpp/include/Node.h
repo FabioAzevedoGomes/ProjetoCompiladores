@@ -2,7 +2,8 @@
  * Class for modeling the Abstract Syntax Tree constructed during syntatic and 
  * semantic analysis of the input program. Contains methods for creating, removing 
  * and accessing nodes related to each of the accepted language's possible 
- * constructions.
+ * constructions. This class also contains private functions for generating 
+ * intermediate code
  * 
  * Author: Fábio de Azevedo Gomes
  */
@@ -13,6 +14,7 @@
 #include "Token.h"
 #include "Tac.h"
 #include "Type.h"
+#include "Manager.h"
 
 #include <vector>
 #include <sstream>
@@ -118,7 +120,29 @@ public:
      */
     void setTemp(std::string temp);
 
+    /**
+     * @brief Generate intermediate code for this node
+     */
+    void generateCode();
+
     // GETTERS
+
+    /**
+     * @brief Returns the indexed child for this node
+     * @param index Child index [0- n]
+     * @returns Pointer to the child 
+     */
+    Node *getChild(int index);
+
+    /**
+     * @brief Returns the next command after this node, or NULL if there is none 
+     */
+    Node *getNextCommand();
+
+    /**
+     * @brief Returns the next element after this node in a lista, or NULL if there is none 
+     */
+    Node *getNextElement();
 
     /**
      * @brief Retruns the name for this node 
@@ -144,28 +168,23 @@ public:
      * @brief Returns the node statement kind
      */
     Statement getKind();
-
-    /**
-     * @brief Returns the indexed child for this node
-     * @param index Child index [0- n]
-     * @returns Pointer to the child 
-     */
-    Node *getChild(int index);
-
-    /**
-     * @brief Returns the next command after this node, or NULL if there is none 
-     */
-    Node *getNextCommand();
-
-    /**
-     * @brief Returns the next element after this node in a lista, or NULL if there is none 
-     */
-    Node *getNextElement();
-
     /**
      * @brief Returns information in a string about this node's variables and metrics
      */
     std::string getInfo();
+
+    /**
+     * @brief Returns the temporary register name created for this node
+     */
+    std::string getTemp();
+
+private:
+    // TAC GENERATION
+
+    /**
+     * @brief Creates a TAC sequence for accessing a vector
+     */
+    Tac *generateVectorAccessTAC();
 };
 
 #endif

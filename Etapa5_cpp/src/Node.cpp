@@ -228,6 +228,24 @@ void Node::setTemp(std::string temp)
     this->temp = temp;
 }
 
+void Node::generateCode()
+{
+    switch (this->statement)
+    {
+    case ST_VECTOR_ACCESS:
+        this->code = generateVectorAccessTAC();
+        break;
+    default:
+        break;
+    }
+
+    // Debug
+    if (this->code != NULL)
+    {
+        std::cout << this->code->getCodeString() << std::endl;
+    }
+}
+
 // GETTERS
 
 const char *Node::getName()
@@ -297,4 +315,45 @@ std::string Node::getInfo()
     info << "| Category: " << this->getValue()->getCategory() << std::endl;
 
     return info.str();
+}
+
+std::string Node::getTemp()
+{
+    return this->temp;
+}
+
+// TAC GENERATION
+
+Tac *Node::generateVectorAccessTAC()
+{
+    // Instructions
+    Tac *load_base;    // 1. t1 = base
+    Tac *calc_offset;  // 2. t2 = i * w
+    Tac *calc_address; // 3. t3 = t1 + t2
+
+    // Temporary addresses
+    std::string t1 = Tac::newRegister();
+    std::string t2 = Tac::newRegister();
+    std::string t3 = Tac::newRegister();
+
+    // Get vector base address from symbol table
+    std::string base = std::to_string(Manager::getSymbol(this->getChild(0)->getValue())->getAddress());
+
+    // Get indexing expression's corresponding temporary register
+    std::string i = this->getChild(1)->getTemp();
+
+    // Get type size
+    std::string w = std::to_string(getSize(this->getChild(0)->getType()));
+
+    // Generate code
+    load_base = new Tac(ILOC_LOADI, base, t1);    // load 'base' => t1
+    calc_offset = new Tac(ILOC_MULTI, i, w, t2);  // mult i,   w => t2
+    calc_address = new Tac(ILOC_ADD, t1, t2, t3); // add t1,  t2 => t3
+
+    // Link code together
+    load_base->addAfter(calc_offset);
+    calc_offset->addAfter(calc_address);
+
+    // Return first instruction of the code block
+    return load_base;
 }

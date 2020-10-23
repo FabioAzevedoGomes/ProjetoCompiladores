@@ -11,7 +11,7 @@ Symbol::Symbol(Token *data_, Nature nature_, Type type_, int count_)
     this->count = count_;
     this->declare_line = data_->getLine();
     this->size = count_ * getSize(type_);
-    this->address = 0;
+    this->address = -1;
 }
 
 Symbol::Symbol(Symbol &symbol)
