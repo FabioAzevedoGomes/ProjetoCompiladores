@@ -61,7 +61,13 @@ public:
      * @param arg2_   Second argument, none by default
      * @param arg3_   Third argument, none by default
      */
-    Tac(ILOCop opcode_, std::string arg1_, std::string arg2_ = "", std::string arg3_ = "");
+    Tac(ILOCop opcode_, std::string arg1_ = "", std::string arg2_ = "", std::string arg3_ = "");
+
+    /**
+     * @brief Copy constructor
+     * Copies the entire code chain present in the given tac
+     */
+    Tac(Tac &tac);
 
     /**
      * @brief Class destructor 
@@ -106,6 +112,12 @@ public:
      * @param instruction New instruction being added
      */
     void addAfter(Tac *instruction);
+
+    /**
+     * @brief Adds another instruction at the end of
+     * the instruction chain starting with this one
+     */
+    void addLast(Tac *instruction);
 
     // EXPORT
 

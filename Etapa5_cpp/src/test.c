@@ -32,7 +32,7 @@ string main(int argc, char argv)
     // Get user input
     input user_input;
 
-    var = process_data(user_input, global_vec[2 + 2]);
+    //var = process_data(user_input, global_vec[2 + 2]);
 
     // Check if less than 10
     if (var >= 10)

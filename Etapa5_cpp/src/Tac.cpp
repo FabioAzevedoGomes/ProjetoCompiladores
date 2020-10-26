@@ -36,11 +36,34 @@ Tac::Tac(ILOCop opcode_, std::string arg1_, std::string arg2_, std::string arg3_
     this->arg1 = arg1_;
     this->arg2 = arg2_;
     this->arg3 = arg3_;
-
     this->label = "";
 
     this->next = NULL;
     this->prev = NULL;
+}
+
+Tac::Tac(Tac &tac)
+{
+    Tac *chain;
+
+    this->opcode = tac.opcode;
+    this->arg1 = tac.arg1;
+    this->arg2 = tac.arg2;
+    this->arg3 = tac.arg3;
+    this->label = tac.label;
+    this->next = NULL;
+    this->prev = NULL;
+
+    // If there are more commands
+    if (tac.next != NULL)
+    {
+        // Copy them as well
+        chain = new Tac(*tac.next);
+
+        // Update chain
+        this->next = chain;
+        this->next->prev = this;
+    }
 }
 
 Tac::~Tac()
@@ -78,30 +101,48 @@ void Tac::setLabel(std::string label)
 
 void Tac::addBefore(Tac *instruction)
 {
-    // Add as the next instruction of this instruction's previous, if exists
-    if (this->prev != NULL)
+    if (instruction != NULL)
     {
-        instruction->prev = this->prev;
-        this->prev->next = instruction;
-    }
+        // Add as the next instruction of this instruction's previous, if exists
+        if (this->prev != NULL)
+        {
+            instruction->prev = this->prev;
+            this->prev->next = instruction;
+        }
 
-    // Add this as instruction's next
-    instruction->next = this;
-    this->prev = instruction;
+        // Add this as instruction's next
+        instruction->next = this;
+        this->prev = instruction;
+    }
 }
 
 void Tac::addAfter(Tac *instruction)
 {
-    // Add as previous to next instruction, if there is any
-    if (this->next != NULL)
+    if (instruction != NULL)
     {
-        this->next->prev = instruction;
-        instruction->next = this->next;
-    }
+        // Add as previous to next instruction, if there is any
+        if (this->next != NULL)
+        {
+            this->next->prev = instruction;
+            instruction->next = this->next;
+        }
 
-    // Add this instruction as previous
-    this->next = instruction;
-    instruction->prev = this;
+        // Add this instruction as previous
+        this->next = instruction;
+        instruction->prev = this;
+    }
+}
+
+void Tac::addLast(Tac *instruction)
+{
+    Tac *aux = this;
+
+    // Iterate commands until last
+    while (aux->next != NULL)
+        aux = aux->next;
+
+    // At the end, insert command
+    aux->addAfter(instruction);
 }
 
 std::string Tac::toString()
@@ -111,11 +152,11 @@ std::string Tac::toString()
     // Add label if there is one
     if (!this->label.empty())
     {
-        code << this->label << ": ";
+        code << this->label << ": " << std::endl;
     }
 
     // Add instruction name and a space
-    code << opname.at(this->opcode) << " ";
+    code << "\t" << opname.at(this->opcode) << " ";
 
     // Based on instruction code
     switch (this->opcode)

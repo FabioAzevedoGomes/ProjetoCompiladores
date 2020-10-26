@@ -1,6 +1,6 @@
 #include "Symbol.h"
 
-Symbol::Symbol(Token *data_, Nature nature_, Type type_, int count_)
+Symbol::Symbol(Token *data_, Nature nature_, Type type_, int count_, bool global_)
 {
     // Copy token data
     Token *copy = new Token(*data_);
@@ -12,6 +12,7 @@ Symbol::Symbol(Token *data_, Nature nature_, Type type_, int count_)
     this->declare_line = data_->getLine();
     this->size = count_ * getSize(type_);
     this->address = -1;
+    this->global = global_;
 }
 
 Symbol::Symbol(Symbol &symbol)
@@ -187,4 +188,9 @@ int Symbol::getOccupiedSize()
 int Symbol::getAddress()
 {
     return this->address;
+}
+
+bool Symbol::isGlobal()
+{
+    return this->global;
 }

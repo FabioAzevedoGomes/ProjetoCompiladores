@@ -15,14 +15,18 @@ int main(int argc, char **argv)
     // Parse input file
     int ret = yyparse();
 
-    // Export the AST
-    exporta(arvore);
+    // If no problemas occurred
+    if (ret == 0)
+    {
+        // Export the AST
+        exporta(arvore);
 
-    // Export the ILOC code
-    export_code(arvore);
+        // Export the ILOC code
+        export_code(arvore);
 
-    // Free the AST memory
-    libera(arvore);
+        // Free the AST memory
+        libera(arvore);
+    }
 
     // Free parser memory
     arvore = NULL;

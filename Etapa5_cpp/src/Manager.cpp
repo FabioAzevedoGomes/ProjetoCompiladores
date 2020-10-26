@@ -127,14 +127,40 @@ void Manager::leaveScope()
 
 // SYMBOL TABLE MANAGEMENT
 
-void Manager::declareSymbol(Symbol *symbol)
+void Manager::declareSymbol(Symbol *symbol, bool globally)
 {
     // Current scope's symbol table
     SymbolTable *current = Manager::stack.top();
     try
     {
-        // Try to delcare symbol
-        current->insertSymbol(symbol, symbol->getName());
+        // If declaring to local symbol table
+        if (!globally)
+        {
+            // Try to delcare symbol
+            current->insertSymbol(symbol, symbol->getName());
+        }
+        // If declaring to global symbol table
+        else
+        {
+            // If at global symbol table
+            if (Manager::stack.size() == 1)
+            {
+                // Try to declare symbol
+                current->insertSymbol(symbol, symbol->getName());
+            }
+            // If not, go deeper
+            else
+            {
+                // Take off stack top (Saved in 'current')
+                Manager::stack.pop();
+
+                // 'Go down' a level
+                declareSymbol(symbol, true);
+
+                // Replace stack top on return
+                Manager::stack.push(current);
+            }
+        }
     }
     catch (DeclaredException *e)
     {
@@ -207,7 +233,7 @@ void Manager::declareVariables(Type type)
 void Manager::declareFunction(Node *function, Type type)
 {
     // Create symbol
-    Symbol *symbol = new Symbol(function->getValue(), NAT_FUNCTION, type, 1);
+    Symbol *symbol = new Symbol(function->getValue(), NAT_FUNCTION, type, 1, true);
 
     // Update function return type
     symbol->setType(type);
@@ -256,27 +282,17 @@ Symbol *Manager::getSymbol(Token *lexval)
         // Free exception memory
         delete e;
 
-        // If this is a literal
-        if (lexval->getCategory() == CAT_LITERAL)
-        {
-            // Don't check on lower scopes
-            symbol = NULL;
-        }
-        // If this is an ID being searched
-        else
-        {
-            // Get reference to top
-            table = Manager::stack.top();
+        // Get reference to top
+        table = Manager::stack.top();
 
-            // Pop top
-            Manager::stack.pop();
+        // Pop top
+        Manager::stack.pop();
 
-            // Check on lower scopes
-            symbol = Manager::getSymbol(lexval);
+        // Check on lower scopes
+        symbol = Manager::getSymbol(lexval);
 
-            // When returning, replace stack top
-            Manager::stack.push(table);
-        }
+        // When returning, replace stack top
+        Manager::stack.push(table);
     }
 
     // Return symbol found (or NULL)
@@ -311,6 +327,9 @@ Node *Manager::createId(Token *lexval, Statement statement)
     // Create node
     Node *id_node = new Node(lexval, id->getType(), statement);
 
+    // Generate intermediate code for this node
+    id_node->generateCode();
+
     return id_node;
 }
 
@@ -328,14 +347,17 @@ Node *Manager::createLiteral(Token *lexval, Type type)
     else
     {
         // If symbol does not exist, create it
-        lit = new Symbol(lexval, NAT_NONE, type, type == TYPE_STRING ? 0 : 1);
+        lit = new Symbol(lexval, NAT_NONE, type, type == TYPE_STRING ? 0 : 1, true);
 
-        // And declare it in current scope
-        Manager::declareSymbol(lit);
+        // And declare it in global scope
+        Manager::declareSymbol(lit, true);
     }
 
     // Create node
     Node *lit_node = new Node(lexval, type, ST_OPERAND);
+
+    // Generate intermediate code for this node
+    lit_node->generateCode();
 
     return lit_node;
 }
@@ -451,10 +473,7 @@ Node *Manager::createVectorAccess(Node *id, Node *index)
     vec_access_node->insertChild(index);
 
     // Check id for correct usage
-    checkId(id);
-
-    // Set id type back to operand (It was on ST_VECTOR_ACCESS for checking usage)
-    id->setKind(ST_OPERAND);
+    checkId(vec_access_node);
 
     // Check for indexing expression type compatibility
     checkCompatibility(TYPE_INT, index->getType(), vec_access_node);
@@ -634,6 +653,9 @@ Node *Manager::createAttribution(Node *lval, Node *op, Node *rval)
         }
     }
 
+    // Create intermediate code for this node
+    op->generateCode();
+
     return op;
 }
 
@@ -704,6 +726,9 @@ Node *Manager::createBinop(Node *l_operand, Node *operation, Node *r_operand)
         operation->setType(inferType(l_operand->getType(), r_operand->getType()));
     }
 
+    // Generate intermediate code for this node
+    operation->generateCode();
+
     return operation;
 }
 
@@ -762,19 +787,21 @@ Node *Manager::createFunctionCall(Node *id, Node *args)
 
 // TYPE AND IDENTIFIER CHECKS
 
-void Manager::checkId(Node *id_node)
+void Manager::checkId(Node *id_node, Nature usage)
 {
     WrongUsageException *e = NULL;
+    Symbol *symbol = NULL;
 
-    // If node is an ID
-    if (id_node->getValue()->getCategory() == CAT_IDENTIFIER)
+    // Based on node statement
+    switch (id_node->getKind())
     {
-        // Search for it on the symbol table
-        Symbol *symbol = getSymbol(id_node->getValue());
-
-        switch (id_node->getKind())
+    case ST_OPERAND:
+        // If node is an ID
+        if (id_node->getValue()->getCategory() == CAT_IDENTIFIER)
         {
-        case ST_OPERAND:
+            // Search for id
+            symbol = getSymbol(id_node->getValue());
+
             if (symbol->getNature() != NAT_IDENTIFIER)
             {
                 e = new WrongUsageException(symbol, id_node);
@@ -783,8 +810,17 @@ void Manager::checkId(Node *id_node)
 
                 exit(e->getCode());
             }
-            break;
-        case ST_FUNCTION_CALL:
+        }
+
+        break;
+    case ST_FUNCTION_CALL:
+
+        // If node is an ID
+        if (id_node->getValue()->getCategory() == CAT_IDENTIFIER)
+        {
+            // Search for function
+            symbol = getSymbol(id_node->getValue());
+
             if (symbol->getNature() != NAT_FUNCTION)
             {
                 e = new WrongUsageException(symbol, id_node);
@@ -793,8 +829,17 @@ void Manager::checkId(Node *id_node)
 
                 exit(e->getCode());
             }
-            break;
-        case ST_VECTOR_ACCESS:
+        }
+
+        break;
+    case ST_VECTOR_ACCESS:
+
+        // If first child is an ID
+        if (id_node->getChild(0)->getValue()->getCategory() == CAT_IDENTIFIER)
+        {
+            // Search for vector
+            symbol = getSymbol(id_node->getChild(0)->getValue());
+
             if (symbol->getNature() != NAT_VECTOR)
             {
                 e = new WrongUsageException(symbol, id_node);
@@ -803,9 +848,11 @@ void Manager::checkId(Node *id_node)
 
                 exit(e->getCode());
             }
-        default:
-            break;
         }
+
+        break;
+    default:
+        break;
     }
 }
 

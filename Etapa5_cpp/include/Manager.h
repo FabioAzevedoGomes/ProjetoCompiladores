@@ -73,8 +73,9 @@ public:
     /**
      * @brief Declares a symbol with the given type
      * @param symbol Symbol being declared
+     * @param globally Whether the symbol should be declared to the global symbol table (No by default)
      */
-    void declareSymbol(Symbol *symbol);
+    void declareSymbol(Symbol *symbol, bool globally = false);
 
     /**
      * @brief Declares the current list of symbols (vars) in the current
@@ -289,8 +290,9 @@ private:
     /**
      * @brief Checks if an identifier node is being used correctly
      * @param id_node Node being checked
+     * @param usage How it's being used (variable by default)
      */
-    void checkId(Node *id_node);
+    void checkId(Node *id_node, Nature usage = NAT_IDENTIFIER);
 
     /**
      * @brief Checks compatibility between types, and generates an error if

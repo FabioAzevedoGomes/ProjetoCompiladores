@@ -21,6 +21,8 @@ private:
     int declare_line; // Line where this symbol was declared
     int count, size;  // Symbol count and occupied size
 
+    bool global; // Whether this is a global symbol or not
+
     Type type;     // Symbol type
     Nature nature; // Symbol nature
 
@@ -39,8 +41,9 @@ public:
      * @param nature_ Symbol nature
      * @param type_   Symbol type
      * @param count_  Symbol count
+     * @param global_ Whether this is a global symbol (false by default)
      */
-    Symbol(Token *data_, Nature nature_, Type type_, int count_);
+    Symbol(Token *data_, Nature nature_, Type type_, int count_, bool global_ = false);
 
     /**
      * @brief Copy constructor
@@ -115,6 +118,8 @@ public:
     int getOccupiedSize();
 
     int getAddress();
+
+    bool isGlobal();
 };
 
 #endif

@@ -107,7 +107,7 @@ typedef enum
     ILOC_STOREAI, // r1 => r2, c3 | Mem(r2 + c3) = r1
     ILOC_STOREAO, // r1 => r2, r3 | Mem(r2 + r3) = r1
     // Copy
-    ILOC_I2I, // r1 => r2 || Mem(r2) = Mem(r1)
+    ILOC_I2I, // r1 => r2 | r2 = r1
     // Compares
     ILOC_CMP_LT, // r1, r2 => r3 | r3 = (r1 <  r2)? true : false
     ILOC_CMP_LE, // r1, r2 => r3 | r3 = (r1 <= r2)? true : false
@@ -122,7 +122,31 @@ typedef enum
 
 } ILOCop;
 
-// Instruction names
+// Binop codes based on token
+const std::unordered_map<std::string, ILOCop> binop_code = {
+
+    // Comparison binary operations
+    {"<", ILOC_CMP_LT},
+    {">", ILOC_CMP_GT},
+    {"==", ILOC_CMP_EQ},
+    {"<=", ILOC_CMP_LE},
+    {">=", ILOC_CMP_GE},
+    {"!=", ILOC_CMP_NE},
+    // Logic binary operations
+    {"&&", ILOC_AND},
+    {"||", ILOC_OR},
+    {"|", ILOC_OR},  // TODO ?
+    {"&", ILOC_AND}, // TODO ?
+    // Arithmetic binary operations
+    {"+", ILOC_ADD},
+    {"-", ILOC_SUB},
+    {"*", ILOC_MULT},
+    {"/", ILOC_DIV},
+    {"%", ILOC_NOP}, // TODO ?
+    {"^", ILOC_NOP}  // TODO ?
+};
+
+// Instruction names for generating code string
 const std::unordered_map<ILOCop, std::string> opname = {
 
     {ILOC_NOP, "nop"},
@@ -148,7 +172,7 @@ const std::unordered_map<ILOCop, std::string> opname = {
     {ILOC_XORI, "xorI"},
     {ILOC_LOAD, "load"},
     {ILOC_LOADI, "loadI"},
-    {ILOC_LOADAI, "laodAI"},
+    {ILOC_LOADAI, "loadAI"},
     {ILOC_LOADA0, "loadA0"},
     {ILOC_STORE, "store"},
     {ILOC_STOREAI, "storeAI"},

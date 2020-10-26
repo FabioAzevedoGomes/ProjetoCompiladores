@@ -241,9 +241,9 @@ lista_identificadores_globais:  lista_identificadores_globais ',' identificador_
  * Um identificador simples
  * Um identificador indexado por um literal inteiro positivo
  */
-identificador_global:   TK_IDENTIFICADOR                    {$$ = new Symbol($1, NAT_IDENTIFIER, TYPE_ANY, 1);
+identificador_global:   TK_IDENTIFICADOR                    {$$ = new Symbol($1, NAT_IDENTIFIER, TYPE_ANY, 1, true);
                                                              delete $1;}
-                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {$$ = new Symbol($1, NAT_VECTOR, TYPE_ANY, $3->getValue().integer);
+                      | TK_IDENTIFICADOR '[' TK_LIT_INT ']' {$$ = new Symbol($1, NAT_VECTOR, TYPE_ANY, $3->getValue().integer, true);
                                                              delete $1; delete $2; delete $3, delete $4;} 
 ;
 
@@ -327,7 +327,7 @@ bloco_comandos:   bloco_comandos_inicio bloco_comandos_fim                      
  * Um unico comando simples (O primeiro de um bloco a ser detectado)
  * Um comando simples, seguido de uma lista de comandos simples, separados por virgula (,)
  */
-lista_comandos_simples:   comando_simples lista_comandos_simples {$1->insertCommand($2); $$ = $1;} // A lista de comandos e o comando segunte do comando primeiro
+lista_comandos_simples:   comando_simples lista_comandos_simples {if ($1 != NULL){ $1->insertCommand($2); $$ = $1; } else $$ = $2;} // A lista de comandos e o comando segunte do comando primeiro
                         | comando_simples                        {$$ = $1;}                        // O comando e o primeiro
 ;
 
@@ -400,7 +400,7 @@ argumento: expressao {$$ = $1;} // Retorna o nodo criado
  * Um identificador simples ...
  * ... seguido de uma expressao entre colchetes
  */
-vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = mngr.createVectorAccess(mngr.createId($1, ST_VECTOR_ACCESS), $3);
+vetor_indexado: TK_IDENTIFICADOR '[' expressao ']' {$$ = mngr.createVectorAccess(mngr.createId($1, ST_OPERAND), $3);
                                                     delete $2; delete $4;}  // Libera a memoria usada para os delimitadores
 ;
 

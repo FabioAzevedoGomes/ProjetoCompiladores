@@ -35,6 +35,7 @@ private:
 
     Tac *code;        // TAC Code generated for this node
     std::string temp; // Name of the temporary register synthesized for this node
+    bool address;     // Whether this node has an address or a value on it's temporary register
 
 public:
     /**
@@ -125,6 +126,11 @@ public:
      */
     void generateCode();
 
+    /**
+     * @brief Sets this node as having an address
+     */
+    void setAddress();
+
     // GETTERS
 
     /**
@@ -168,6 +174,7 @@ public:
      * @brief Returns the node statement kind
      */
     Statement getKind();
+
     /**
      * @brief Returns information in a string about this node's variables and metrics
      */
@@ -178,13 +185,51 @@ public:
      */
     std::string getTemp();
 
+    /**
+     * @brief Returns A COPY of the code for this register 
+     */
+    Tac *getCode();
+
+    /**
+     * @brief If this node has an address
+     */
+    bool hasAddress();
+
+    /**
+     * @brief If this node has a value
+     */
+    bool hasValue();
+
 private:
     // TAC GENERATION
 
     /**
-     * @brief Creates a TAC sequence for accessing a vector
+     * @brief Creates TAC sequence for accessing a variable
+     * and sets the node's temp to the variable address 
      */
-    Tac *generateVectorAccessTAC();
+    Tac *generateLvalVariableTAC();
+
+    /**
+     * @brief Creates a TAC sequence for accessing a vector and
+     * sets the node's temp to the indexed element's address
+     */
+    Tac *generateLvalVectorTAC();
+
+    /**
+     * @brief Creates a TAC sequence for an attribution operation
+     */
+    Tac *generateAttributionTAC();
+
+    /**
+     * @brief Creates a TAC for binary operations
+     * @param op ILOC opcode for this operation
+     */
+    Tac *generateBinopTAC(ILOCop op);
+
+    /**
+     * @brief Creates a TAC for a ternary operation 
+     */
+    Tac *generateTernopTAC();
 };
 
 #endif

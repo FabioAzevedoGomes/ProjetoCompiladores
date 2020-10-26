@@ -21,6 +21,12 @@ std::string SymbolTable::toString()
     // Add address information
     output << "Symbol table with current address at " << this->current_address << ": " << std::endl;
 
+    // Inform about global status
+    if (this->global)
+    {
+        output << "THIS IS THE GLOBAL SYMBOL TABLE" << std::endl;
+    }
+
     // Iterate table
     for (auto i = this->table.begin(); i != this->table.end(); ++i)
     {
