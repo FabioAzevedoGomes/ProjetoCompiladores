@@ -162,7 +162,7 @@
  */
 programa:   /* empty */                 {$$ = NULL;} // No final do programa, sai do escopo global, liberando a memoria da tabela de simbolos
           | declaracao_funcao programa  {$1->insertCommand($2); $$ = $1; arvore = $$;} // Insere o resto do programa como proximo da declaracao de funcao
-          | var_global programa         {$$ = $2;}                                      // Ignora variaveis nao inicializadas
+          | var_global programa         {$$ = $2;}                                     // Ignora variaveis nao inicializadas
 ;
 
 
@@ -420,7 +420,7 @@ var_local: tipo_const_estatico lista_identificadores_locais {$$ = $2; mngr.decla
  * Um identificador local, seguido de uma lista de identificadores locais, separados por virgula
  */
 lista_identificadores_locais:   identificador_local                                  {$$ = $1;}
-                              | identificador_local ',' lista_identificadores_locais {$1->insertNext($3); $$ = $1; 
+                              | identificador_local ',' lista_identificadores_locais {if ($1 != NULL){$1->insertNext($3); $$ = $1;} else $$ = $3; 
                                                                                       delete $2;} // Libera a memoria usada para o delimitador
 ;
 
@@ -577,8 +577,8 @@ fator:   '(' expressao ')' {$$ = $2; delete $1; delete $3;}
  * Uma chamada de funcao
  * Um operador unario aplicado a um fator
  */
-operando:   TK_IDENTIFICADOR       {$$ = mngr.createId($1, ST_OPERAND); }
-          | vetor_indexado         {$$ = $1;}                
+operando:   TK_IDENTIFICADOR       {$$ = mngr.createId($1, ST_OPERAND, false);}
+          | vetor_indexado         {$$ = $1; $1->setRval();}                
           | literal                {$$ = $1;}
           | chamada_funcao         {$$ = $1;}                                      
           | operador_unario fator  {$$ = mngr.createUnop($1, $2);}

@@ -99,7 +99,7 @@ typedef enum
     ILOC_XORI, // r1, c2 => r3 | r3 = r1 xor c2
     // Loads
     ILOC_LOAD,   // r1     => r2 | r2 = Mem(r1)
-    ILOC_LOADI,  // c1     => r2 | r2 = Mem(c1)
+    ILOC_LOADI,  // c1     => r2 | r2 = c1
     ILOC_LOADAI, // r1, c2 => r3 | r3 = Mem(r1 + c2)
     ILOC_LOADA0, // r1, r2 => r3 | r3 = Mem(r1 + r2)
     // Stores
@@ -122,9 +122,21 @@ typedef enum
 
 } ILOCop;
 
-// Binop codes based on token
-const std::unordered_map<std::string, ILOCop> binop_code = {
+// Binop codes based on token for arithmetic operations
+const std::unordered_map<std::string, ILOCop> arithmetic_binop_code = {
 
+    // Arithmetic binary operations
+    {"+", ILOC_ADD},
+    {"-", ILOC_SUB},
+    {"*", ILOC_MULT},
+    {"/", ILOC_DIV},
+    {"%", ILOC_NOP}, // TODO ?
+    {"^", ILOC_NOP}  // TODO ?
+
+};
+
+// Binop codes based on token for logic and comparison operation
+const std::unordered_map<std::string, ILOCop> logic_binop_code = {
     // Comparison binary operations
     {"<", ILOC_CMP_LT},
     {">", ILOC_CMP_GT},
@@ -135,15 +147,9 @@ const std::unordered_map<std::string, ILOCop> binop_code = {
     // Logic binary operations
     {"&&", ILOC_AND},
     {"||", ILOC_OR},
-    {"|", ILOC_OR},  // TODO ?
-    {"&", ILOC_AND}, // TODO ?
-    // Arithmetic binary operations
-    {"+", ILOC_ADD},
-    {"-", ILOC_SUB},
-    {"*", ILOC_MULT},
-    {"/", ILOC_DIV},
-    {"%", ILOC_NOP}, // TODO ?
-    {"^", ILOC_NOP}  // TODO ?
+    {"|", ILOC_OR}, // TODO ?
+    {"&", ILOC_AND} // TODO ?
+
 };
 
 // Instruction names for generating code string

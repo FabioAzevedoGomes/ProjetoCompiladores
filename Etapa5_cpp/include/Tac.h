@@ -16,24 +16,29 @@
 #define TAC_H
 
 #include "Type.h"
-#include "Manager.h"
 
+#include <iostream>
 #include <string>
 #include <sstream>
+#include <list>
 
 class Tac
 {
 private:
     static uint register_count; // Number of registers used
     static uint label_count;    // Number of temporary labels used
+    static uint hole_count;     // Number of label holes used
+
+    // List containing a reference to every name that was generated (Registers, labels and patched holes)
+    static std::list<std::string *> used_names;
 
     ILOCop opcode; // TAC Operation code
 
-    std::string arg1; // First argument
-    std::string arg2; // Second argument
-    std::string arg3; // Third argument
+    std::string *arg1; // First argument
+    std::string *arg2; // Second argument
+    std::string *arg3; // Third argument
 
-    std::string label; // Label for this instruction, if there is one
+    std::string *label; // Label for this instruction, if there is one
 
     // Double linked list
     Tac *next; // Next instruction
@@ -44,13 +49,45 @@ public:
      * @brief Creates a new register name for usage with temporary variables
      * @returns A new register name, previously unused
      */
-    static std::string newRegister();
+    static std::string *newRegister();
 
     /**
      * @brief Creates a new label name for usage with jumps
      * @returns A new label name, previously unused 
      */
-    static std::string newLabel();
+    static std::string *newLabel();
+
+    /**
+     * @brief Creates a new "hole" for a label, to be filled by a later expression
+     * @returns A new hole name, previously unused 
+     */
+    static std::string *newHole();
+
+    /**
+     * @brief Returns the appropriate register name given the variable global status
+     * @param global If the symbol being addressed is local or global
+     * @returns "rbss" or "rfp", base on given global status 
+     */
+    static std::string *getRegister(int global);
+
+    /**
+     * @brief Returns a new string that was saved in the global name list, used for literal values
+     * @param literal The literal that should be kept track of
+     * @returns String with the literal 
+     */
+    static std::string *getName(std::string literal);
+
+    /**
+     * @brief Patches a list of holes with the given label
+     * @param holes List of holes to be patched
+     * @param label Label to be given to those holes
+     */
+    static void patch(std::list<std::string *> holes, std::string *label);
+
+    /**
+     * @brief Frees all the memory used for the labels and names that were generated 
+     */
+    static void freeNames();
 
     // CONSTRUCTOR AND DESTRUCTOR
 
@@ -61,7 +98,7 @@ public:
      * @param arg2_   Second argument, none by default
      * @param arg3_   Third argument, none by default
      */
-    Tac(ILOCop opcode_, std::string arg1_ = "", std::string arg2_ = "", std::string arg3_ = "");
+    Tac(ILOCop opcode_, std::string *arg1_ = NULL, std::string *arg2_ = NULL, std::string *arg3_ = NULL);
 
     /**
      * @brief Copy constructor
@@ -90,14 +127,14 @@ public:
     /**
      * @brief Retruns this instruction's label, if there is one  
      */
-    std::string getLabel();
+    std::string *getLabel();
 
     // SETTERS
 
     /**
      * @brief Sets this instruction's label to the given one 
      */
-    void setLabel(std::string label);
+    void setLabel(std::string *label);
 
     // INSTRUCTION LIST LOGIC
 

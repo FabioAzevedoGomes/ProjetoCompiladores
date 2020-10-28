@@ -31,9 +31,9 @@ alfanumerico    {letra}|{digito}
 identificador   ({letra}|_)({alfanumerico}|_)*
 
 /* Char: qualquer caractere entre aspas simples que nao e aspas simples ('), nova linha (\n) ou vazio ("") */
-literal_char    '[^'""\n]'
+literal_char    '[^'""\n]?'
 /* String: 1 ou mais caracteres entre aspas duplas*/
-literal_string  \"[^\n"]+\"
+literal_string  \"[^\n"]*\"
 /* Int: Qualquer sequencia de 1 ou mais digitos precedidos de + ou - (opcional) */
 literal_int     {digito}+
 /* Float: Um inteiro seguido de um ponto e 1 ou mais digitos e, opcionalmente, o caractere E|e seguido de um inteiro */

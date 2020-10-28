@@ -186,18 +186,18 @@ std::string WrongParameterException::what()
     case ERR_WRONG_PAR_INPUT:
         error = "On line " + std::to_string(get_line_number()) + ": Wrong parameter for INPUT statement: " +
                 "\n " + usage->reconstruct() +
-                "\nExpected INT or FLOAT, but argument has type " + getTypeName(usage->getType());
+                "\nExpected INT or FLOAT, but argument has type " + getTypeName(usage->getChild(0)->getType());
         break;
     case ERR_WRONG_PAR_OUTPUT:
         error = "On line " + std::to_string(get_line_number()) + ": Wrong parameter for OUTPUT statement: " +
                 "\n " + usage->reconstruct() +
-                "\nExpected INT or FLOAT, but argument has type " + getTypeName(usage->getType());
+                "\nExpected INT or FLOAT, but argument has type " + getTypeName(usage->getChild(0)->getType());
         break;
     case ERR_WRONG_PAR_RETURN:
 
         error = "On line " + std::to_string(get_line_number()) + ": Wrong type in return statement " +
                 "\n " + usage->reconstruct() +
-                "\nFunction has return type " + getTypeName(func->getType()) + " but expression has type " + getTypeName(usage->getType()) +
+                "\nFunction has return type " + getTypeName(func->getType()) + " but expression has type " + getTypeName(usage->getChild(0)->getType()) +
                 "\nFunction was declared on line " + std::to_string(func->getLine()) + ": " +
                 "\n " + func->getDeclaration();
         break;

@@ -1,42 +1,94 @@
 #include "Tac.h"
 
-// Register and label counters for name generation
+// Register, label and hole counters for name generation
 uint Tac::register_count = 0;
 uint Tac::label_count = 0;
+uint Tac::hole_count = 0;
+std::list<std::string *> Tac::used_names;
 
-std::string Tac::newRegister()
+std::string *Tac::newRegister()
 {
-    std::stringstream new_register;
-
-    // Make name
-    new_register << "r" << Tac::register_count;
+    // Create new name
+    std::string *new_register = new std::string("r" + std::to_string(Tac::register_count));
 
     // Update counter
     Tac::register_count++;
 
-    return new_register.str();
+    // Add to list
+    Tac::used_names.push_back(new_register);
+
+    return new_register;
 }
 
-std::string Tac::newLabel()
+std::string *Tac::newLabel()
 {
-    std::stringstream new_label;
-
-    // Make name
-    new_label << "L" << Tac::label_count;
+    std::string *new_label = new std::string("L" + std::to_string(Tac::label_count));
 
     // Update counter
     Tac::label_count++;
 
-    return new_label.str();
+    // Add to list
+    Tac::used_names.push_back(new_label);
+
+    return new_label;
 }
 
-Tac::Tac(ILOCop opcode_, std::string arg1_, std::string arg2_, std::string arg3_)
+std::string *Tac::newHole()
+{
+    std::string *new_hole = new std::string("H" + std::to_string(Tac::hole_count));
+
+    // Update counter
+    Tac::hole_count++;
+
+    // Add to list
+    Tac::used_names.push_back(new_hole);
+
+    return new_hole;
+}
+
+std::string *Tac::getRegister(int global)
+{
+    std::string *reg = new std::string(global ? "rbss" : "rfp");
+
+    // Add to list
+    Tac::used_names.push_back(reg);
+
+    return reg;
+}
+
+std::string *Tac::getName(std::string literal)
+{
+    std::string *new_literal = new std::string(literal);
+
+    // Add to list
+    used_names.push_back(new_literal);
+
+    return new_literal;
+}
+
+void Tac::patch(std::list<std::string *> holes, std::string *label)
+{
+    for (auto i = holes.begin(); i != holes.end(); ++i)
+        **i = *label;
+
+    // TODO Here we can free the hole strings as they get patched, as each hole is unique
+}
+
+void Tac::freeNames()
+{
+    for (auto i = Tac::used_names.begin(); i != Tac::used_names.end(); ++i)
+        delete *i;
+}
+
+//
+
+Tac::Tac(ILOCop opcode_, std::string *arg1_, std::string *arg2_, std::string *arg3_)
 {
     this->opcode = opcode_;
     this->arg1 = arg1_;
     this->arg2 = arg2_;
     this->arg3 = arg3_;
-    this->label = "";
+    this->label = NULL;
 
     this->next = NULL;
     this->prev = NULL;
@@ -89,12 +141,12 @@ std::string Tac::getCodeString()
     return code.str();
 }
 
-std::string Tac::getLabel()
+std::string *Tac::getLabel()
 {
     return this->label;
 }
 
-void Tac::setLabel(std::string label)
+void Tac::setLabel(std::string *label)
 {
     this->label = label;
 }
@@ -150,9 +202,9 @@ std::string Tac::toString()
     std::stringstream code;
 
     // Add label if there is one
-    if (!this->label.empty())
+    if (this->label != NULL)
     {
-        code << this->label << ": " << std::endl;
+        code << *this->label << ": " << std::endl;
     }
 
     // Add instruction name and a space
@@ -167,24 +219,24 @@ std::string Tac::toString()
     // 1 operand
     case ILOC_JUMP:
     case ILOC_JUMPI:
-        code << this->arg1;
+        code << *this->arg1;
         break;
     // 2 operands
     case ILOC_LOAD:
     case ILOC_LOADI:
     case ILOC_STORE:
     case ILOC_I2I:
-        code << this->arg1 << " => " << this->arg2;
+        code << *this->arg1 << " => " << *this->arg2;
         break;
     // 3 operands, format x => y, z
     case ILOC_STOREAI:
     case ILOC_STOREAO:
     case ILOC_CBR:
-        code << this->arg1 << " => " << this->arg2 << ", " << this->arg3;
+        code << *this->arg1 << " => " << *this->arg2 << ", " << *this->arg3;
         break;
     // 3 operands, format x, y => z
     default:
-        code << this->arg1 << ", " << this->arg2 << " => " << this->arg3;
+        code << *this->arg1 << ", " << *this->arg2 << " => " << *this->arg3;
         break;
     }
 

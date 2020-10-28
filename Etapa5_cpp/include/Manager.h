@@ -20,6 +20,7 @@ class Tac;
 #include "Node.h"
 #include "SymbolTable.h"
 #include "errors.h"
+#include "Tac.h"
 
 #include <stack>
 #include <list>
@@ -123,9 +124,10 @@ public:
      * @brief Creates a node for an identifier
      * @param lexval    Identifier token
      * @param statement How it's being used
+     * @param lval If this id is an lval or not, true by default
      * @returns Pointer to the node
      */
-    Node *createId(Token *lexval, Statement statement);
+    Node *createId(Token *lexval, Statement statement, bool lval = true);
 
     /**
      * @brief Creates a node for a literal value

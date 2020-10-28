@@ -44,6 +44,9 @@ Manager::~Manager()
 {
     // Leave global scope
     Manager::leaveScope();
+
+    // Free memory used for labels and registers during code generation
+    Tac::freeNames();
 }
 
 // SCOPE MANAGEMENT
@@ -319,13 +322,13 @@ Node *Manager::createDeclaration(Token *lexval, Type type, Statement statement)
     return declaration_node;
 }
 
-Node *Manager::createId(Token *lexval, Statement statement)
+Node *Manager::createId(Token *lexval, Statement statement, bool lval)
 {
     // Check for id existance
     Symbol *id = Manager::getSymbol(lexval);
 
     // Create node
-    Node *id_node = new Node(lexval, id->getType(), statement);
+    Node *id_node = new Node(lexval, id->getType(), statement, lval);
 
     // Generate intermediate code for this node
     id_node->generateCode();
@@ -354,7 +357,7 @@ Node *Manager::createLiteral(Token *lexval, Type type)
     }
 
     // Create node
-    Node *lit_node = new Node(lexval, type, ST_OPERAND);
+    Node *lit_node = new Node(lexval, type, ST_OPERAND, false);
 
     // Generate intermediate code for this node
     lit_node->generateCode();
@@ -400,6 +403,9 @@ Node *Manager::createIf(Node *condition, Node *then_node, Node *else_node)
     // Check if types are compatible for the condition
     checkCompatibility(TYPE_BOOL, condition->getType(), if_node);
 
+    // Generate intermediate code for the node
+    if_node->generateCode();
+
     return if_node;
 }
 
@@ -430,6 +436,9 @@ Node *Manager::createFor(Node *init_attrib, Node *condition, Node *loop_attrib, 
     // Check if types are compatible for condition
     checkCompatibility(TYPE_BOOL, condition->getType(), for_node);
 
+    // Generate intermediate code for the node
+    for_node->generateCode();
+
     return for_node;
 }
 
@@ -453,6 +462,9 @@ Node *Manager::createWhile(Node *condition, Node *body)
 
     // Check if types are compatible for condition
     checkCompatibility(TYPE_BOOL, condition->getType(), while_node);
+
+    // Generate intermediate code for the node
+    while_node->generateCode();
 
     return while_node;
 }
@@ -499,9 +511,15 @@ Node *Manager::createInput(Node *id)
     // Check for correct id usage
     checkId(id);
 
-    // Check if id has the correct type
-    checkParamCompatibility(TYPE_INT, id->getType(), input_node);
+    // Check if int or float
+    if (id->getType() != TYPE_INT && id->getType() != TYPE_FLOAT)
+    {
+        WrongParameterException *e = new WrongParameterException(input_node, TYPE_INT, id->getType(), function);
 
+        std::cerr << e->what() << std::endl;
+
+        exit(e->getCode());
+    }
     return input_node;
 }
 
@@ -520,8 +538,15 @@ Node *Manager::createOutput(Node *out)
     // Check for correct operand usage
     checkId(out);
 
-    // Check if id has the correct type
-    checkParamCompatibility(TYPE_INT, out->getType(), output_node);
+    // Check if int or float
+    if (out->getType() != TYPE_INT && out->getType() != TYPE_FLOAT)
+    {
+        WrongParameterException *e = new WrongParameterException(output_node, TYPE_INT, out->getType(), function);
+
+        std::cerr << e->what() << std::endl;
+
+        exit(e->getCode());
+    }
 
     return output_node;
 }
@@ -712,7 +737,8 @@ Node *Manager::createBinop(Node *l_operand, Node *operation, Node *r_operand)
         checkCompatibility(operation->getChild(0)->getType(), r_operand->getType(), operation);
 
         // Update type
-        operation->setType(inferType(operation->getChild(0)->getType(), r_operand->getType()));
+        //operation->setType(inferType(operation->getChild(0)->getType(), r_operand->getType()));
+        operation->setType(TYPE_BOOL);
     }
     else
     {
@@ -722,8 +748,10 @@ Node *Manager::createBinop(Node *l_operand, Node *operation, Node *r_operand)
         // Check if those types are compatible with operation type
         checkCompatibility(inferType(l_operand->getType(), r_operand->getType()), operation->getType(), operation);
 
-        // Upate type
-        operation->setType(inferType(l_operand->getType(), r_operand->getType()));
+        // If operation is not a logic operation
+        if (operation->getType() != TYPE_BOOL)
+            // Update type
+            operation->setType(inferType(l_operand->getType(), r_operand->getType()));
     }
 
     // Generate intermediate code for this node

@@ -53,7 +53,7 @@ string main(int argc, char argv)
                 var = var > 0 ? var - 1 : var - 2; // Concertei miseravi
             };
         };
-        output false;
+        output 0;
         //result = result + " menor q 10";
     };
 
