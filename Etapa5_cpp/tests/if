@@ -1,0 +1,19 @@
+int main()
+{
+
+    int x <= 40;
+    int y <= 10;
+    int z <= 2;
+
+    if (x > 20 && y < 20)
+    {
+        z = x;
+    }
+    else
+    {
+        z = y;
+    };
+    
+
+    return z;
+}

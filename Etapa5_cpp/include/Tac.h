@@ -129,6 +129,12 @@ public:
      */
     std::string *getLabel();
 
+    /**
+     * @brief Retruns the total amount of instructions in the code chain starting
+     * on this instruction 
+     */
+    int getCodeSize();
+
     // SETTERS
 
     /**

@@ -1,0 +1,23 @@
+int foo(int x, int y)
+{
+
+    x = x + y;
+
+    return x;
+}
+
+int main()
+{
+
+    int x <= 0;
+    int y <= 0;
+
+    while (x < 10) do
+    {
+        x = foo(x, 2);
+
+        y = y + 1;
+    };
+
+    return y;
+}

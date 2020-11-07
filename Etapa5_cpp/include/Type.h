@@ -73,7 +73,8 @@ typedef enum
 // Instruction codes for ILOC intermediate code language
 typedef enum
 {
-    ILOC_NOP, // NOP
+    ILOC_NOP,  // NOP
+    ILOC_HALT, // HALT
     // Arithmetics
     ILOC_ADD,   // r1, r2 => r3 | r3 = r1 + r2
     ILOC_SUB,   // r1, r2 => r3 | r3 = r1 - r2
@@ -130,8 +131,8 @@ const std::unordered_map<std::string, ILOCop> arithmetic_binop_code = {
     {"-", ILOC_SUB},
     {"*", ILOC_MULT},
     {"/", ILOC_DIV},
-    {"%", ILOC_NOP}, // TODO ?
-    {"^", ILOC_NOP}  // TODO ?
+    {"%", ILOC_NOP}, // ?
+    {"^", ILOC_NOP}  // ?
 
 };
 
@@ -156,6 +157,7 @@ const std::unordered_map<std::string, ILOCop> logic_binop_code = {
 const std::unordered_map<ILOCop, std::string> opname = {
 
     {ILOC_NOP, "nop"},
+    {ILOC_HALT, "halt"},
     {ILOC_ADD, "add"},
     {ILOC_SUB, "sub"},
     {ILOC_MULT, "mult"},

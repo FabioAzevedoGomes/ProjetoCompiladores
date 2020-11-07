@@ -38,8 +38,11 @@ class Manager
 private:
     static std::stack<SymbolTable *> stack; // The Stack used for maintaining scope-specific symbol tables
 
-    Symbol *function; // The function representing the current scope
-    int depth;        // Scope "depth", 0  when inside global scope
+    static Symbol *function; // The function representing the current scope
+    int depth;               // Scope "depth", 0  when inside global scope
+
+    static Node *main_node;     // Pointer to Node containing main function code
+    static Symbol *main_symbol; // Pointer to Symbol containing main function information
 
     std::vector<Symbol *> vars; // Variables being saved for bulk delcaration
     std::vector<Node *> nodes;  // Nodes being saved for bulk typing
@@ -69,7 +72,43 @@ public:
      */
     void leaveScope();
 
+    /**
+     * @brief Leaves a function scope, finally removing 
+     * it's symbol table from the stack
+     */
+    void leaveFunction();
+
+    // CODE MANAGEMENT
+
+    /**
+     * @brief Inserts the initial loading code in the root node of the AST 
+     * @param root Root of the AST
+     */
+    static void addDriverCode(void *root);
+
+    /**
+     * @brief Updates the main function references to the given ones
+     * @param main_node   Pointer to the main function node
+     * @param main_symbol Pointer to the main function symbol
+     */
+    static void updateMain(Node *main_node, Symbol *main_symbol);
+
+    /**
+     * @brief Returns the main function symbol 
+     */
+    static Symbol *getMain();
+
+    /**
+     * @brief Returns the current function symbol 
+     */
+    static Symbol *getCurrentFunction();
+
     // SYMBOL TABLE MANAGEMENT
+
+    /**
+     * @brief Returns the currently active symbol table
+     */
+    static SymbolTable *getActiveSymbolTable();
 
     /**
      * @brief Declares a symbol with the given type

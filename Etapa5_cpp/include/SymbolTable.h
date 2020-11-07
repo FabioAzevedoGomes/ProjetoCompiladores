@@ -69,6 +69,11 @@ public:
      */
     void insertSymbol(Symbol *symbol, std::string key);
 
+    /**
+     * @brief Returns the hash table containing every symbol that was declared globally  
+     */
+    std::unordered_map<std::string, Symbol *> getHashTable();
+
     // SETTERS
 
     /**

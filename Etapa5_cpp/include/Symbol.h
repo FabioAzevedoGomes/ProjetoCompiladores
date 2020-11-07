@@ -26,6 +26,7 @@ private:
     Type type;     // Symbol type
     Nature nature; // Symbol nature
 
+    std::string *label;           // Label given to the first instruction in this function
     std::vector<Symbol *> params; // List of parameters if this symbol is a function
 
     Token *data; // Symbol token data
@@ -101,6 +102,12 @@ public:
      */
     bool updateSize(int count);
 
+    /**
+     * @brief Gives a new label to this function, which points to it's code segment startint poirnt 
+     * @param label The label being given
+     */
+    void giveLabel(std::string *label);
+
     // GETTERS
 
     Category getCategory();
@@ -120,6 +127,8 @@ public:
     int getAddress();
 
     bool isGlobal();
+
+    std::string *getLabel();
 };
 
 #endif

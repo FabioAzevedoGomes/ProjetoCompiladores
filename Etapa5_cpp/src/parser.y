@@ -105,7 +105,7 @@
 %token<lexval> '?'
 
 // Initial grammar symbol
-%start programa
+%start inicio
 
 %type <symbol> lista_identificadores_globais
 %type <symbol> identificador_global
@@ -154,13 +154,19 @@
 %%
 
 /**
+ * Simbolo inicial da gramatica
+ */
+inicio: programa {mngr.addDriverCode(arvore);} // Apos reconhecer o programa, adicionar o codigo que faz jump para a main
+;
+
+/**
  * Um programa pode ser:
  *
  * Vazio
  * Uma declaracao de funcao, seguida de mais programa
  * Uma definicao de variavel, seguida de mais programa
  */
-programa:   /* empty */                 {$$ = NULL;} // No final do programa, sai do escopo global, liberando a memoria da tabela de simbolos
+programa:   /* empty */                 {$$ = NULL;} // Fim
           | declaracao_funcao programa  {$1->insertCommand($2); $$ = $1; arvore = $$;} // Insere o resto do programa como proximo da declaracao de funcao
           | var_global programa         {$$ = $2;}                                     // Ignora variaveis nao inicializadas
 ;
@@ -266,7 +272,7 @@ definicao_funcao: tipo_estatico TK_IDENTIFICADOR assinatura {$$ = mngr.createDec
  * A definicao da sua assinatura ...
  * ... terminada por um bloco de comandos
  */
-declaracao_funcao: definicao_funcao bloco_comandos {$$ = mngr.createFunctionDeclaration($1, $2);}
+declaracao_funcao: definicao_funcao bloco_comandos {$$ = mngr.createFunctionDeclaration($1, $2); mngr.leaveFunction();}
 ;
 
 /**
@@ -434,12 +440,12 @@ lista_identificadores_locais:   identificador_local                             
 identificador_local:   TK_IDENTIFICADOR                           {$$ = NULL; mngr.addToVarList(new Symbol($1, NAT_IDENTIFIER, TYPE_ANY, 1));
                                                                    delete $1;}
                      | TK_IDENTIFICADOR TK_OC_LE literal          {$$ = mngr.createInitialization(mngr.createDeclaration($1, TYPE_ANY, ST_OPERAND), 
-                                                                                                  mngr.createDeclaration($2, TYPE_ANY, ST_ATTRIB_VARIABLE),
+                                                                                                  mngr.createDeclaration($2, TYPE_ANY, ST_INIT_VARIABLE),
                                                                                                   $3);
                                                                    mngr.addToVarList(new Symbol($1, NAT_IDENTIFIER, TYPE_ANY, 1), $$);
                                                                   }
                      | TK_IDENTIFICADOR TK_OC_LE TK_IDENTIFICADOR {$$ = mngr.createInitialization(mngr.createDeclaration($1, TYPE_ANY, ST_OPERAND), 
-                                                                                                  mngr.createDeclaration($2, TYPE_ANY, ST_ATTRIB_VARIABLE),
+                                                                                                  mngr.createDeclaration($2, TYPE_ANY, ST_INIT_VARIABLE),
                                                                                                   mngr.createId($3, ST_OPERAND));
                                                                    mngr.addToVarList(new Symbol($1, NAT_IDENTIFIER, TYPE_ANY, 1), $$);}
 ;
@@ -625,7 +631,6 @@ operador_binario_baixa_prec:   '+'                   {$$ = mngr.createDeclaratio
                              | '-'                   {$$ = mngr.createDeclaration($1, TYPE_INT, ST_BINOP);}  // Cria um nodo para o operador de subtracao
                              | '|'                   {$$ = mngr.createDeclaration($1, TYPE_BOOL, ST_BINOP);} // Cria um nodo para o operador bitwise or
                              | '&'                   {$$ = mngr.createDeclaration($1, TYPE_BOOL, ST_BINOP);} // Cria um nodo para o operador bitwise and
-                             | comparador_relacional {$$ = $1;}                           // Retorna o nodo do comparador relacional 
                              | operador_logico       {$$ = $1;}                           // Retorna o nodo do operador logico
                              | '?' expressao ':'     {$$ = mngr.createTernop($2);             // Cria o operador ternario parcialmente
                                                       delete $1; delete $3;}   // Libera a memoria usada para os delimitadors
@@ -643,6 +648,7 @@ operador_binario_alta_prec:   '*' {$$ = mngr.createDeclaration($1, TYPE_INT, ST_
                             | '/' {$$ = mngr.createDeclaration($1, TYPE_INT, ST_BINOP);} // Cria nodo para o operador de divisao
                             | '%' {$$ = mngr.createDeclaration($1, TYPE_INT, ST_BINOP);} // Cria nodo para o operador de modulo
                             | '^' {$$ = mngr.createDeclaration($1, TYPE_INT, ST_BINOP);} // Cria nodo para o operador de exponenciacao
+                            | comparador_relacional {$$ = $1;}                           // Retorna o nodo do comparador relacional 
 ;
 
 /** Um operador unario pode ser:
@@ -670,7 +676,7 @@ operador_unario:   '+' {$$ = mngr.createDeclaration($1, TYPE_INT , ST_UNOP);} //
 int yyerror(char const *s)
 {    
     // Signal syntax error
-    std::cerr << s << std::endl << "On line " << get_line_number();
+    std::cerr << s << std::endl << "On line " << get_line_number() << std::endl;
     
     // Return 1
     return 1;

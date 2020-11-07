@@ -9,7 +9,7 @@ int getSize(Type type)
     case TYPE_FLOAT:
         return 8;
     case TYPE_BOOL:
-        return 1;
+        return 4;
     case TYPE_CHAR:
         return 1;
     case TYPE_STRING:

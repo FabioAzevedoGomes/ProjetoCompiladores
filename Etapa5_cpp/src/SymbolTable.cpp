@@ -63,8 +63,14 @@ int SymbolTable::getAddress()
     return this->current_address;
 }
 
+std::unordered_map<std::string, Symbol *> SymbolTable::getHashTable()
+{
+    return this->table;
+}
+
 void SymbolTable::insertSymbol(Symbol *symbol, std::string key)
 {
+
     // Update symbol memory address
     symbol->setAddress(this->current_address);
 

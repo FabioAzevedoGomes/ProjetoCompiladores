@@ -1,6 +1,9 @@
 #include "Manager.h"
 
 std::stack<SymbolTable *> Manager::stack;
+Node *Manager::main_node;
+Symbol *Manager::main_symbol;
+Symbol *Manager::function;
 
 // EXTERN FUNCTIONS
 
@@ -38,6 +41,9 @@ Manager::Manager()
 
     this->function = NULL;
     this->depth = 0;
+
+    Manager::main_node = NULL;
+    Manager::main_symbol = NULL;
 }
 
 Manager::~Manager()
@@ -60,7 +66,7 @@ void Manager::enterScope()
     if (this->depth == 0)
     {
         // Create symbol table for new scope, where activation frame starts at 0
-        new_scope = new SymbolTable(0);
+        new_scope = new SymbolTable(4 * getSize(TYPE_INT) + function->getParams().size() * getSize(TYPE_INT));
     }
     // If not entering function
     else
@@ -93,42 +99,96 @@ void Manager::leaveScope()
 {
     if (!Manager::stack.empty())
     {
-        // Top symbol table (Current scope)
-        SymbolTable *top = Manager::stack.top();
-
-        // Remove the symbol table from the top
-        Manager::stack.pop();
-
-        // If leaving a function
-        if (this->depth == 1)
+        // If leaving unnamed scope that is not global or a function
+        if (this->depth != 1)
         {
-            // Reser function pointer
-            function = NULL;
-        }
-        // If leaving unnamed scope that is not global
-        else if (this->depth > 0)
-        {
-            // Update previous scope's current address to leaving scope's address
-            Manager::stack.top()->setAddress(top->getAddress());
-        }
+            // Top symbol table (Current scope)
+            SymbolTable *top = Manager::stack.top();
 
-        // If leaving scope went ok
-        if (top != NULL)
-        {
-            // Debug
-            //std::cout << " = Leaving scope with symbol table = " << std::endl
-            //          << top->toString() << std::endl;
+            // Remove the symbol table from the top
+            Manager::stack.pop();
 
-            // Free it's memory
-            delete (top);
+            if (this->depth > 0)
+            {
+                // Update previous scope's current address to leaving scope's address
+                Manager::stack.top()->setAddress(top->getAddress());
+            }
+
+            // If leaving scope went ok
+            if (top != NULL)
+            {
+                // Debug
+                //std::cout << " = Leaving scope with symbol table = " << std::endl
+                //          << top->toString() << std::endl;
+
+                // Free it's memory
+                delete (top);
+            }
+
+            // Lower current scope depth
+            this->depth--;
         }
-
-        // Lower current scope depth
-        this->depth--;
     }
 }
 
+void Manager::leaveFunction()
+{
+    // Reser function pointer
+    function = NULL;
+
+    // Top symbol table (Current scope)
+    SymbolTable *top = Manager::stack.top();
+
+    // Remove the symbol table from the top
+    Manager::stack.pop();
+
+    // If leaving scope went ok (redundant, always will since leaving function)
+    if (top != NULL)
+    {
+        delete top;
+    }
+
+    // Lower current scope depth
+    this->depth--;
+}
+
+// CODE MANAGEMENT
+
+void Manager::addDriverCode(void *root)
+{
+    int rsp_val = 1024;  // TODO Values that make sense
+    int rbss_val = 2048; // TODO Values that make sense
+
+    if (root != NULL)
+        ((Node *)root)->generateProgramStartTAC(rsp_val, rbss_val);
+}
+
+void Manager::updateMain(Node *main_node, Symbol *main_symbol)
+{
+    Manager::main_node = main_node;
+    Manager::main_symbol = main_symbol;
+}
+
+Symbol *Manager::getMain()
+{
+    return Manager::main_symbol;
+}
+
+Symbol *Manager::getCurrentFunction()
+{
+    return Manager::function;
+}
+
 // SYMBOL TABLE MANAGEMENT
+
+SymbolTable *Manager::getActiveSymbolTable()
+{
+    // Get top of stack symbol table
+    SymbolTable *current_st = Manager::stack.top();
+
+    // Return it
+    return current_st;
+}
 
 void Manager::declareSymbol(Symbol *symbol, bool globally)
 {
@@ -224,6 +284,9 @@ void Manager::declareVariables(Type type)
 
                 // Assign type to initialization node
                 (*j)->setType(type);
+
+                // Generate code for this node
+                (*j)->generateCode();
             }
         }
     }
@@ -330,8 +393,10 @@ Node *Manager::createId(Token *lexval, Statement statement, bool lval)
     // Create node
     Node *id_node = new Node(lexval, id->getType(), statement, lval);
 
-    // Generate intermediate code for this node
-    id_node->generateCode();
+    // If not creating a function call
+    if (statement != ST_FUNCTION_CALL)
+        // Generate intermediate code for this node
+        id_node->generateCode();
 
     return id_node;
 }
@@ -593,6 +658,9 @@ Node *Manager::createReturn(Node *retval)
     // Check if id has the correct type
     checkParamCompatibility(function->getType(), retval->getType(), return_node);
 
+    // Generate intermediate code for this node
+    return_node->generateCode();
+
     return return_node;
 }
 
@@ -623,6 +691,9 @@ Node *Manager::createShift(Node *id, Node *op, Node *amount)
         // Exit
         exit(ERR_WRONG_PAR_SHIFT);
     }
+
+    // Generate intermediate code for this node
+    op->generateCode();
 
     return op;
 }
@@ -712,6 +783,9 @@ Node *Manager::createUnop(Node *operation, Node *operand)
     // Update type
     operation->setType(inferType(operation->getType(), operand->getType()));
 
+    // Generate intermediate code for this node
+    operation->generateCode();
+
     return operation;
 }
 
@@ -783,6 +857,9 @@ Node *Manager::createFunctionDeclaration(Node *id, Node *body)
     // Insert function body as only child
     id->insertChild(body);
 
+    // Generate intermediate code for this node
+    id->generateCode();
+
     // Return function node
     return id;
 }
@@ -808,6 +885,9 @@ Node *Manager::createFunctionCall(Node *id, Node *args)
 
     // Check if function arguments match parameters
     checkArguments(id);
+
+    // Generate intermediate code for this node
+    id->generateCode();
 
     // Return function call node
     return id;

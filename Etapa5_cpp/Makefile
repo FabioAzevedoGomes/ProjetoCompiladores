@@ -2,6 +2,7 @@ OBJ := obj/
 INC := include/
 SRC := src/
 DOC := doc/
+TST := tests/
 
 # Make entire compiler
 all: dirs classes parser scanner
@@ -33,14 +34,15 @@ scanner:
 dirs:
 	mkdir -p ${OBJ}
 	mkdir -p ${DOC}
+	mkdir -p ${TST}
 
 # Tests
 test:
-	@cat -n ${SRC}test.c
-	@valgrind --leak-check=full --track-origins=yes ./etapa5 < ${SRC}test.c
-	@#./etapa5 < ${SRC}test.c > output.iloc
-	@#python3 ilocsim.py output.iloc
+	@cat -n ${TST}$(in)
+	@valgrind --leak-check=full --track-origins=yes ./etapa5 < ${TST}$(in) > output.iloc
+	@python3 ilocsim.py -s -t --data 500 --stack 1024 -x output.iloc
 
-# Cleaner
+
+# Clean
 clean:
-	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa5 ${DOC}*.output
+	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa5 ${DOC}*.output *.iloc

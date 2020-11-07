@@ -1,0 +1,23 @@
+int global_var;
+
+int foo(int x, int y)
+{
+
+    x = x + y;
+
+    return x;
+}
+
+int main()
+{
+    int x <= 10;
+    int y <= 20;
+
+    for (x = 0: x < y : x = foo(x,1))
+    {
+        global_var = global_var + 1;
+    };
+
+
+    return 0;
+}

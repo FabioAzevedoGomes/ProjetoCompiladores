@@ -207,8 +207,20 @@ void Node::insertChild(Node *child)
 
 void Node::insertCommand(Node *next_cmd)
 {
-    // Update next command
-    this->next_cmd = next_cmd;
+    if (next_cmd != NULL)
+    {
+        // Update next command
+        this->next_cmd = next_cmd;
+
+        // Get next command's code
+        Tac *next_code = next_cmd->getCode();
+
+        if (this->code != NULL)
+            // Link to this node's code
+            this->code->addLast(next_code);
+        else
+            this->code = next_code;
+    }
 }
 
 void Node::setType(Type type)
@@ -263,9 +275,17 @@ void Node::generateCode()
             this->code = generateRvalVectorTAC();
         }
         break;
+    case ST_INIT_VARIABLE:
+        // std::cout << "Making an initialization TAC sequence" << std::endl;
+        this->code = generateInitializationTAC();
+        break;
     case ST_ATTRIB_VARIABLE:
         // std::cout << "Making an attribution TAC sequence" << std::endl;
         this->code = generateAttributionTAC();
+        break;
+    case ST_UNOP:
+        // std::cout << "Making a unop TAC sequence" << std::endl;
+        this->code = generateUnopTAC(this->getName());
         break;
     case ST_BINOP:
         // std::cout << "Making a binop TAC sequence" << std::endl;
@@ -295,11 +315,24 @@ void Node::generateCode()
         // std::cout << "Making a While TAC sequence " << std::endl;
         this->code = generateWhileTAC();
         break;
+    case ST_SHIFT:
+        // std::cout <<  Making a shift (" << this->getName() << ") TAC sequence" << std::endl
+        this->code = generateShiftTAC(!strcmp(this->getName(), "<<") ? ILOC_LSHIFT : ILOC_RSHIFT);
+        break;
     case ST_FUNCTION_CALL:
-        // TODO
+        //std::cout << "Making a function call TAC sequence" << std::endl;
+        this->code = generateFunctionCallTAC();
+        break;
+    case ST_FUNCTION_DECLARATION:
+        //std::cout << "Making a function declaration TAC sequence" << std::endl;
+        this->code = generateFunctionDeclarationTAC();
+        break;
+    case ST_RETURN:
+        //std::cout << "Making a return TAC sequence" << std::endl;
+        this->code = generateReturnTAC();
         break;
     default:
-        std::cerr << "Unknown node type for TAC creation, no code will be generated for it: " << std::endl;
+        std::cerr << "// Unknown node type for TAC creation, no code will be generated for it: " << std::endl;
         std::cerr << this->getInfo() << std::endl;
         break;
     }
@@ -425,8 +458,11 @@ std::string *Node::getTemp()
 
 Tac *Node::getCode()
 {
-    // Copy code
-    Tac *copy = new Tac(*(this->code));
+    Tac *copy = NULL;
+
+    if (this->code != NULL)
+        // Copy code
+        copy = new Tac(*(this->code));
 
     // Return copy of the code
     return copy;
@@ -496,7 +532,6 @@ Tac *Node::generateRvalVariableTAC()
     // Instructions
     Tac *calculate_base_address = NULL; // 1. t1 = mem(rfp : rbss + base)
     Tac *load_actual_value = NULL;      // 2. t1 = mem(t1)
-    Tac *jump_short_circuit = NULL;     // 3. jump l1
 
     // Calculate the variable's address
     calculate_base_address = this->generateLvalVariableTAC();
@@ -504,29 +539,8 @@ Tac *Node::generateRvalVariableTAC()
     // Load actual value into the register
     load_actual_value = new Tac(ILOC_LOAD, this->temp, this->temp); // load t1 => t1
 
-    // If this is a boolean literal
-    if (this->getValue()->getCategory() == CAT_LITERAL && this->getType() == TYPE_BOOL)
-    {
-        // Holes to-be-patched
-        std::string *h1 = Tac::newHole();
-
-        // Create jump instruction for short-circuit
-        jump_short_circuit = new Tac(ILOC_JUMPI, h1);
-
-        // If this is a TRUE literal
-        if (!strcmp(this->getValue()->getName(), "true"))
-            // Add hole to this node's TRUE list
-            this->true_list.push_back(h1);
-
-        // If this is a FALSE literal
-        if (!strcmp(this->getValue()->getName(), "false"))
-            // Add hole to this node's FALSE list
-            this->false_list.push_back(h1);
-    }
-
     // Link instructions together
     calculate_base_address->addLast(load_actual_value);
-    calculate_base_address->addLast(jump_short_circuit);
 
     // Mark this node as having a value
     this->setValue();
@@ -549,7 +563,7 @@ Tac *Node::generateLvalVectorTAC()
     std::string *base = Tac::getName(std::to_string(vec->getAddress()));
 
     // Get vector type size
-    std::string *w = Tac::getName(getTypeName(vec->getType()));
+    std::string *w = Tac::getName(std::to_string(getSize(vec->getType())));
 
     // Get index expression temp (accessed index)
     std::string *t1 = this->getChild(1)->getTemp();
@@ -568,9 +582,9 @@ Tac *Node::generateLvalVectorTAC()
     calculate_index_code = this->getChild(1)->getCode();
 
     // Generate code for acessing the vector
-    calculate_vector_base = new Tac(ILOC_ADDI, rbss, base, t2);  // addI rbss, base => t2
-    calculate_offset = new Tac(ILOC_MULTI, t1, w, t3);           // multI t1, w => t3
-    calculate_indexed_position = new Tac(ILOC_ADDI, t2, t3, t4); // addI t2, t3 => t4
+    calculate_vector_base = new Tac(ILOC_ADDI, rbss, base, t2); // addI rbss, base => t2
+    calculate_offset = new Tac(ILOC_MULTI, t1, w, t3);          // multI t1, w => t3
+    calculate_indexed_position = new Tac(ILOC_ADD, t2, t3, t4); // add t2, t3 => t4
 
     // Link instructions together
     calculate_index_code->addLast(calculate_vector_base);
@@ -609,6 +623,35 @@ Tac *Node::generateRvalVectorTAC()
 
     // Return first element in the code block
     return calculate_address;
+}
+
+Tac *Node::generateInitializationTAC()
+{
+    // Instructions
+    Tac *calculate_lval = NULL; // t1 = lval address
+    Tac *calculate_rval = NULL; // t2 = rval value (literal)
+    Tac *store_result = NULL;   // Mem(t1) = t2
+
+    // Generate code for lval child
+    this->getChild(0)->generateCode();
+
+    // Get code for lval and rval
+    calculate_lval = this->getChild(0)->getCode();
+    calculate_rval = this->getChild(1)->getCode();
+
+    // Temporary registers
+    std::string *t1 = this->getChild(0)->getTemp();
+    std::string *t2 = this->getChild(1)->getTemp();
+
+    // Generate code for store instruction
+    store_result = new Tac(ILOC_STORE, t2, t1); // store t2 => t1
+
+    // Link code together
+    calculate_lval->addLast(calculate_rval);
+    calculate_rval->addLast(store_result);
+
+    // Return first instruction in the code block
+    return calculate_lval;
 }
 
 Tac *Node::generateAttributionTAC()
@@ -696,6 +739,51 @@ Tac *Node::generateAttributionTAC()
 
     // Return first instruction in the code block
     return calculate_lval;
+}
+
+Tac *Node::generateUnopTAC(std::string op)
+{
+    Tac *code = NULL;
+
+    // If code is for a logic NOT
+    if (!strcmp(op.c_str(), "!"))
+    {
+        // Get child code
+        code = this->getChild(0)->getCode();
+
+        // Swap true and false lists
+        this->true_list = this->getChild(0)->getFalseList();
+        this->false_list = this->getChild(0)->getTrueList();
+    }
+
+    // If code is for a signal inversion
+    if (!strcmp(op.c_str(), "-"))
+    {
+        // Operand code
+        Tac *operand_code = this->getChild(0)->getCode();
+
+        // Names
+        std::string *const_0 = Tac::getName(std::to_string(0));
+
+        // Temporary registers
+        std::string *t1 = this->getChild(0)->getTemp();
+        std::string *t2 = Tac::newRegister();
+
+        // Generate code
+        code = new Tac(ILOC_RSUBI, t1, const_0, t2); // rsubI t1, 0 => t2
+
+        // Link code together
+        code->addLast(operand_code);
+
+        // Set this node's temp
+        this->setTemp(t2);
+
+        // Mark this node as having a value
+        this->setValue();
+    }
+
+    // Return generated code
+    return code;
 }
 
 Tac *Node::generateBinopTAC(std::string op)
@@ -1022,6 +1110,12 @@ Tac *Node::generateTernopTAC()
         then_jump_exit->addLast(then_attribute_false);
         then_attribute_false->addLast(then_nop);
     }
+    // If not
+    else
+    {
+        // Just get temporary register
+        t1 = this->getChild(0)->getTemp();
+    }
 
     // If else statement is a logic operation
     if (logic_binop_code.find(this->getChild(2)->getName()) != logic_binop_code.end())
@@ -1061,6 +1155,12 @@ Tac *Node::generateTernopTAC()
         else_attribute_true->addLast(else_jump_exit);
         else_jump_exit->addLast(else_attribute_false);
         else_attribute_false->addLast(else_nop);
+    }
+    // If not
+    else
+    {
+        // Just get temporary register
+        t2 = this->getChild(2)->getTemp();
     }
 
     // Create jump, attribution and nop codes
@@ -1279,4 +1379,395 @@ Tac *Node::generateWhileTAC()
 
     // Return first instruction in the generated code block
     return condition_code;
+}
+
+Tac *Node::generateShiftTAC(ILOCop op)
+{
+    // Instructions
+    Tac *calculate_variable_address = NULL;
+    Tac *calculate_shift_amount = NULL;
+    Tac *load_actual_value = NULL;
+    Tac *shift_instruction = NULL;
+    Tac *store_new_value = NULL;
+
+    // Get temporary registers
+    std::string *t1 = this->getChild(0)->getTemp();
+    std::string *t2 = this->getChild(1)->getTemp();
+
+    // New temporary register to store the result
+    std::string *t3 = Tac::newRegister();
+
+    //  Get variable and shift amount calculation code
+    calculate_variable_address = this->getChild(0)->getCode();
+    calculate_shift_amount = this->getChild(1)->getCode();
+
+    // Generate code for shift operation
+    load_actual_value = new Tac(ILOC_LOAD, t1, t3); // load   t1     => t3
+    shift_instruction = new Tac(op, t3, t2, t3);    // shift t3, t2 => t3
+    store_new_value = new Tac(ILOC_STORE, t3, t1);  // store  t3     => t1
+
+    // Link code together
+    calculate_variable_address->addLast(calculate_shift_amount);
+    calculate_shift_amount->addLast(load_actual_value);
+    load_actual_value->addLast(shift_instruction);
+    shift_instruction->addLast(store_new_value);
+
+    // Return first instruction in the generated code block
+    return calculate_variable_address;
+}
+
+Tac *Node::generateFunctionDeclarationTAC()
+{
+    // Instructions
+    Tac *update_rfp_call = NULL; // rfp <- rsp
+    Tac *update_rsp_vars = NULL; // rsp <- rsp + (local_vars(N))
+    Tac *function_body = NULL;   // ... function code ...
+
+    // Load as many passed arguments as necessary
+    Tac *load_param_i = NULL; // ti <- Mem(rfp + param_address)
+    Tac *save_param_i = NULL; // Mem(rfp + var_addr) <- ti
+
+    // Temporary registers
+    std::string *ti = Tac::newRegister(); // For loading parameters into their respective local vars
+
+    // Labels
+    std::string *l1 = Tac::newLabel(); // Label given to function starting point
+
+    // Get current active symbol table
+    SymbolTable *current_st = Manager::getActiveSymbolTable();
+
+    // Get function symbol
+    Symbol *function = Manager::getSymbol(this->lexval);
+
+    //
+
+    // Calculate amount of space occupied by function parameters
+    int params_occupied_size = function->getParams().size() * getSize(TYPE_INT);
+
+    // Sum frame call information, return value and parameter values' occupied memory in the frame
+    int call_offset = 3 * getSize(TYPE_INT) + params_occupied_size + getSize(TYPE_INT);
+
+    // Calculate amount of space used by the local variables in the function scope
+    int local_vars_occupied_size = current_st->getAddress();
+
+    // Names
+    std::string *rfp = Tac::getName("rfp");
+    std::string *rsp = Tac::getName("rsp");
+    std::string *local_offset = Tac::getName(std::to_string(local_vars_occupied_size));
+    std::string *param_load_address = NULL;
+    std::string *param_store_address = NULL;
+
+    //
+
+    // Get code for the function start (If exists)
+    if (this->getChild(0) != NULL)
+        function_body = this->getChild(0)->getCode();
+
+    // Generate code
+    update_rfp_call = new Tac(ILOC_I2I, rsp, rfp);                // i2i  rsp               => rfp
+    update_rsp_vars = new Tac(ILOC_ADDI, rsp, local_offset, rsp); // addI rsp, vars_offset  => rsp
+
+    // Generate code for loading arguments, if any
+    int param_load_offset = 3 * getSize(TYPE_INT);
+    int param_store_offset = call_offset;
+    for (uint i = 0; i < function->getParams().size(); ++i, param_load_offset += getSize(TYPE_INT), param_store_offset += getSize(TYPE_INT))
+    {
+        // Get param address name
+        param_load_address = Tac::getName(std::to_string(param_load_offset));
+        param_store_address = Tac::getName(std::to_string(param_store_offset));
+
+        // Generate code for loading parameter i
+        load_param_i = new Tac(ILOC_LOADAI, rfp, param_load_address, ti);   // loadAI rfp, param_load_offset=> ti
+        save_param_i = new Tac(ILOC_STOREAI, ti, rfp, param_store_address); // storeAI ti => rfp, param_store_offset
+
+        // Link code together
+        load_param_i->addLast(save_param_i);
+        update_rsp_vars->addLast(load_param_i);
+    }
+
+    // Link code together
+    update_rfp_call->addLast(update_rsp_vars);
+    update_rsp_vars->addLast(function_body);
+
+    // Label code and function symbol
+    update_rfp_call->setLabel(l1);
+    function->giveLabel(l1);
+
+    // If this is the 'main' function
+    if (!strcmp(this->getValue()->getName(), "main"))
+    {
+        // Update reference in manager
+        Manager::updateMain(this, function);
+    }
+
+    // Return first instruction in the generated code block
+    return update_rfp_call;
+}
+
+Tac *Node::generateFunctionCallTAC()
+{
+    // Instructions
+    Tac *calc_return_address = NULL; // t1 <- rpc + (3 + param_count + 2)
+    Tac *save_return_address = NULL; // Mem (rsp + 0) <- t1
+    Tac *save_current_rsp = NULL;    // Mem (rsp + 4) <- rsp
+    Tac *save_current_rfp = NULL;    // Mem (rsp + 8) <- rfp
+    Tac *jump_function = NULL;       // jumpI => func_label
+    Tac *get_return_val = NULL;      // t1 <- Mem(rsp + offset_return)
+
+    // Load as many parameters as necessary
+    Tac *code_param_i = NULL; // t2 <- ... calculate param expression ...
+    Tac *save_param_i = NULL; // Mem(rsp + param_offset) <- t2
+
+    // Get function symbol
+    Symbol *called_func = Manager::getSymbol(this->getValue());
+    Node *aux = NULL; // Auxiliary pointer for traversing arguments
+
+    // Get function label
+    std::string *l1 = called_func->getLabel();
+
+    // Temporary registers
+    std::string *t1 = Tac::newRegister(); // Return value
+    std::string *t2 = NULL;               // Parameter copying
+
+    // Calculate size occupied by return data + params in function frame
+    int offset_return_val = 3 * getSize(TYPE_INT) + called_func->getParams().size() * getSize(TYPE_INT);
+
+    // Calculate return address offset
+    int offset_return_addr = 5; // Considering 0 parameters, 5 instructions are still needed
+
+    // Parameter offset
+    int param_offset = 3 * getSize(TYPE_INT); // Starts 3 values after rsp
+
+    // Names
+    std::string *rfp = Tac::getName("rfp");
+    std::string *rsp = Tac::getName("rsp");
+    std::string *rpc = Tac::getName("rpc");
+    std::string *const_0 = Tac::getName(std::to_string(0));
+    std::string *const_4 = Tac::getName(std::to_string(4));
+    std::string *const_8 = Tac::getName(std::to_string(8));
+    std::string *offset_param = NULL;
+
+    //
+
+    // Generate code for saving state variables
+    save_current_rsp = new Tac(ILOC_STOREAI, rsp, rsp, const_4); // storeAI rsp => rsp, 4
+    save_current_rfp = new Tac(ILOC_STOREAI, rfp, rsp, const_8); // storeAi rfp => rsp, 8
+
+    // Generate code for passing arguments, if any
+    aux = this->getChild(0);
+    for (uint i = 0; i < called_func->getParams().size(); ++i, param_offset += getSize(TYPE_INT), aux = aux->getNextElement())
+    {
+        // Get temp for argument
+        t2 = aux->getTemp();
+
+        // Get code for argument
+        code_param_i = aux->getCode();
+
+        // Get name for offset
+        offset_param = Tac::getName(std::to_string(param_offset));
+
+        // Generate code for 'stacking' value of parameter in the called function's frame
+        save_param_i = new Tac(ILOC_STOREAI, t2, rsp, offset_param); // storeAI t2 => rsp, param_offset
+
+        // Link to the instructions
+        save_current_rfp->addLast(code_param_i);
+        save_current_rfp->addLast(save_param_i);
+
+        // Increment the return address offset by the size of the new code
+        offset_return_addr += code_param_i->getCodeSize();
+    }
+
+    std::string *offset_retval = Tac::getName(std::to_string(offset_return_val));
+    std::string *offset_retaddr = Tac::getName(std::to_string(offset_return_addr));
+
+    // Calculate the return address
+    calc_return_address = new Tac(ILOC_ADDI, rpc, offset_retaddr, t1); // addI    rpc, offset_return_addr => t1
+    save_return_address = new Tac(ILOC_STOREAI, t1, rsp, const_0);     // storeAI t1                      => rsp, 0
+
+    // Generate code for jumping and returning
+    jump_function = new Tac(ILOC_JUMPI, l1);                       // jumpI                           => l1
+    get_return_val = new Tac(ILOC_LOADAI, rsp, offset_retval, t1); // loadAI  rsp, offset_return_val  => t1
+
+    // Link code together
+    calc_return_address->addLast(save_return_address);
+    save_return_address->addLast(save_current_rsp);
+    save_current_rsp->addLast(save_current_rfp);
+    save_current_rfp->addLast(jump_function);
+    jump_function->addLast(get_return_val);
+
+    // Set this node's temp
+    this->setTemp(t1);
+
+    // Set this node as having a value ( The one returned by the function)
+    this->setValue();
+
+    // Return first instruction in the generated code block
+    return calc_return_address;
+}
+
+Tac *Node::generateReturnTAC()
+{
+    // Instructions
+    Tac *load_result = NULL;        // t0 <- return_expression
+    Tac *save_return = NULL;        // Mem(rfp + offset_return) <- t0
+    Tac *get_return_address = NULL; // t1 <- Mem(rfp + 0)
+    Tac *get_old_rsp = NULL;        // t2 <- Mem(rfp + 4)
+    Tac *get_old_rfp = NULL;        // t3 <- Mem(rfp + 8)
+    Tac *update_rsp = NULL;         // rsp <- t2
+    Tac *update_rfp = NULL;         // rfp <- t3
+    Tac *jump_return = NULL;        // jump t1
+
+    // Get current function symbol
+    Symbol *current_func = Manager::getCurrentFunction();
+
+    // Temporary registers
+    std::string *t1 = this->getChild(0)->getTemp(); // Return value
+    std::string *t2 = Tac::newRegister();           // Return address
+    std::string *t3 = Tac::newRegister();           // Old rsp
+    std::string *t4 = Tac::newRegister();           // Old rfp
+
+    // Calculate size occupied by function parameters in frame
+    int return_offset = 3 * getSize(TYPE_INT) + current_func->getParams().size() * getSize(TYPE_INT);
+
+    // Names
+    std::string *rfp = Tac::getName("rfp");
+    std::string *rsp = Tac::getName("rsp");
+    std::string *offset_return = Tac::getName(std::to_string(return_offset));
+    std::string *const_0 = Tac::getName(std::to_string(0));
+    std::string *const_4 = Tac::getName(std::to_string(4));
+    std::string *const_8 = Tac::getName(std::to_string(8));
+
+    // Get code from child expression
+    load_result = this->getChild(0)->getCode(); // t1 <- ... expression ...
+
+    // Generate code for the return statement
+    save_return = new Tac(ILOC_STOREAI, t1, rfp, offset_return); // storeAI t1     => rfp, offset_return
+    get_return_address = new Tac(ILOC_LOADAI, rfp, const_0, t2); // loadAI  rfp, 0 => t2
+    get_old_rsp = new Tac(ILOC_LOADAI, rfp, const_4, t3);        // loadAI  rfp, 4 => t3
+    get_old_rfp = new Tac(ILOC_LOADAI, rfp, const_8, t4);        // loadAi  rpf, 8 => t4
+    update_rsp = new Tac(ILOC_I2I, t3, rsp);                     // i2i     t3     => rsp
+    update_rfp = new Tac(ILOC_I2I, t4, rfp);                     // i2i     t4     => rfp
+    jump_return = new Tac(ILOC_JUMP, t2);                        // jump           => t2
+
+    // Link code together
+    load_result->addLast(save_return);
+    save_return->addLast(get_return_address);
+    get_return_address->addLast(get_old_rsp);
+    get_old_rsp->addLast(get_old_rfp);
+    get_old_rfp->addLast(update_rsp);
+    update_rsp->addLast(update_rfp);
+    update_rfp->addLast(jump_return);
+
+    // Return first instruction in the generated code block
+    return load_result;
+}
+
+void Node::generateProgramStartTAC(int rsp_val, int rbss_val)
+{
+    // Setup
+    Tac *start_rfp = NULL;  // rfp <- rsp_start
+    Tac *start_rsp = NULL;  // rsp <- rsp_start
+    Tac *start_rbss = NULL; // rbss <- rbss_start
+
+    Tac *load_literal_i = NULL;  // For loading literal value into the temp register
+    Tac *store_literal_i = NULL; // For storing literal value into the data segment
+
+    // Function call to main
+    Tac *calc_return_address = NULL; // t1 <- rpc + (3 + param_count + 2)
+    Tac *save_return_address = NULL; // Mem (rsp + 0) <- t1
+    Tac *save_current_rsp = NULL;    // Mem (rsp + 4) <- rsp
+    Tac *save_current_rfp = NULL;    // Mem (rsp + 8) <- rfp
+    Tac *jump_main = NULL;           // jumpI label_main
+
+    // Return from main
+    Tac *halt = NULL; // halt
+
+    // Get main function symbol
+    Symbol *main = Manager::getMain();
+
+    std::string *t1 = Tac::newRegister(); // Temp reg for return address
+    std::string *t2 = Tac::newRegister(); // Temp reg for loading literals
+
+    // Get names for rbss and rsp initial values
+    std::string *rsp_start = Tac::getName(std::to_string(rsp_val));
+    std::string *rbss_start = Tac::getName(std::to_string(rbss_val));
+
+    // Get names for registers
+    std::string *rfp = Tac::getName("rfp");
+    std::string *rsp = Tac::getName("rsp");
+    std::string *rbss = Tac::getName("rbss");
+    std::string *rpc = Tac::getName("rpc");
+    std::string *const_0 = Tac::getName(std::to_string(0));
+    std::string *const_4 = Tac::getName(std::to_string(4));
+    std::string *const_5 = Tac::getName(std::to_string(5));
+    std::string *const_8 = Tac::getName(std::to_string(8));
+
+    // Literal value address offset in the data segment
+    int literal_address = -1;
+    std::string *lit_offset = NULL;
+    std::string *lit_value = NULL;
+
+    // Get main code label
+    std::string *label_main = main->getLabel();
+
+    // Generate code
+    start_rfp = new Tac(ILOC_LOADI, rsp_start, rsp);    // loadI rsp_start => rsp
+    start_rsp = new Tac(ILOC_LOADI, rsp_start, rfp);    // loadI rsp_start => rfp
+    start_rbss = new Tac(ILOC_LOADI, rbss_start, rbss); // loadI rbss_start => rbss
+
+    // Calculate the return address
+    calc_return_address = new Tac(ILOC_ADDI, rpc, const_5, t1);    // addI    rpc, 5 => t1
+    save_return_address = new Tac(ILOC_STOREAI, t1, rsp, const_0); // storeAI t1     => rsp, 0
+    save_current_rsp = new Tac(ILOC_STOREAI, rsp, rsp, const_4);   // storeAI rsp    => rsp, 4
+    save_current_rfp = new Tac(ILOC_STOREAI, rfp, rsp, const_8);   // storeAi rfp    => rsp, 8
+
+    jump_main = new Tac(ILOC_JUMPI, label_main); // jumpI label_main
+    halt = new Tac(ILOC_HALT);                   // halt
+
+    // Get global symbol table
+    SymbolTable *global_scope = Manager::getActiveSymbolTable();
+    std::unordered_map<std::string, Symbol *> symbols = global_scope->getHashTable();
+
+    // Generate code for loading literal values, if there are any
+    for (auto i = symbols.begin(); i != symbols.end(); ++i)
+    {
+        // If literal value
+        if (i->second->getCategory() == CAT_LITERAL)
+        {
+            // Get literal address and value
+            literal_address = i->second->getAddress();
+            lit_value = Tac::getName(i->second->getName());
+
+            // Generate a name for the literal address
+            lit_offset = Tac::getName(std::to_string(literal_address));
+
+            // Generate code for storing this value in the data segment
+            load_literal_i = new Tac(ILOC_LOADI, lit_value, t2);           // loadI   lit_val => t2
+            store_literal_i = new Tac(ILOC_STOREAI, t2, rbss, lit_offset); // storeAI t2      => rbss , lit_offset
+
+            // Link code together
+            start_rbss->addLast(load_literal_i);
+            load_literal_i->addLast(store_literal_i);
+        }
+    }
+
+    // Link code together
+    start_rfp->addLast(start_rsp);
+    start_rsp->addLast(start_rbss);
+    start_rbss->addLast(calc_return_address);
+
+    calc_return_address->addLast(save_return_address);
+    save_return_address->addLast(save_current_rsp);
+    save_current_rsp->addLast(save_current_rfp);
+    save_current_rfp->addLast(jump_main);
+
+    jump_main->addLast(halt);
+
+    // Add this node's code after the driver code
+    halt->addLast(this->code);
+
+    // Update this node's code to start at the driver code
+    this->code = start_rfp;
+
+    return;
 }

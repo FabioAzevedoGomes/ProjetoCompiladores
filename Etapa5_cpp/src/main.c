@@ -19,7 +19,7 @@ int main(int argc, char **argv)
     if (ret == 0)
     {
         // Export the AST
-        exporta(arvore);
+        //exporta(arvore);
 
         // Export the ILOC code
         export_code(arvore);

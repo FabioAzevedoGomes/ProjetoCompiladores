@@ -148,6 +148,11 @@ bool Symbol::updateSize(int count)
     return status;
 }
 
+void Symbol::giveLabel(std::string *label)
+{
+    this->label = label;
+}
+
 // GETTERS
 
 Category Symbol::getCategory()
@@ -193,4 +198,9 @@ int Symbol::getAddress()
 bool Symbol::isGlobal()
 {
     return this->global;
+}
+
+std::string *Symbol::getLabel()
+{
+    return this->label;
 }

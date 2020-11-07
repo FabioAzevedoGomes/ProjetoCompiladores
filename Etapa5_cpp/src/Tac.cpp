@@ -130,7 +130,7 @@ std::string Tac::getCodeString()
     std::stringstream code;
 
     // Add current code
-    code << this->toString() << ";" << std::endl;
+    code << this->toString() << std::endl;
 
     // If there is more code
     if (this->next != NULL)
@@ -144,6 +144,18 @@ std::string Tac::getCodeString()
 std::string *Tac::getLabel()
 {
     return this->label;
+}
+
+int Tac::getCodeSize()
+{
+    int instruction_count = 1; // Total instruction count (Starts at 1 to count this instruction as well)
+
+    // Iterate every instruction while counting
+    for (Tac *i = this->next; i != NULL; i = i->next, instruction_count++)
+        ;
+
+    // return total
+    return instruction_count;
 }
 
 void Tac::setLabel(std::string *label)
@@ -189,12 +201,15 @@ void Tac::addLast(Tac *instruction)
 {
     Tac *aux = this;
 
-    // Iterate commands until last
-    while (aux->next != NULL)
-        aux = aux->next;
+    if (instruction != NULL)
+    {
+        // Iterate commands until last
+        while (aux->next != NULL)
+            aux = aux->next;
 
-    // At the end, insert command
-    aux->addAfter(instruction);
+        // At the end, insert command
+        aux->addAfter(instruction);
+    }
 }
 
 std::string Tac::toString()
@@ -215,11 +230,12 @@ std::string Tac::toString()
     {
     // 0 operands
     case ILOC_NOP:
+    case ILOC_HALT:
         break; // Do nothing
     // 1 operand
     case ILOC_JUMP:
     case ILOC_JUMPI:
-        code << *this->arg1;
+        code << " => " << *this->arg1;
         break;
     // 2 operands
     case ILOC_LOAD:
