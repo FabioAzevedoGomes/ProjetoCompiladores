@@ -16,11 +16,17 @@
 #define TAC_H
 
 #include "Type.h"
+#include "ASM.h"
 
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <list>
+#include <vector>
+#include <algorithm>
+
+// Forward declare ASM
+class ASM;
 
 class Tac
 {
@@ -43,6 +49,10 @@ private:
     // Double linked list
     Tac *next; // Next instruction
     Tac *prev; // Previous instruction
+
+    // Live variables in this instruciton
+    std::vector<std::string *> live_in;
+    std::vector<std::string *> live_out;
 
 public:
     /**
@@ -145,12 +155,61 @@ public:
      */
     Tac *getNext();
 
+    /**
+     * @brief Returns the previous instruction after this one 
+     */
+    Tac *getPrev();
+
+    /**
+     * @brief Returns the selected argument
+     * @param index Selected arg 
+     */
+    std::string *getArgument(int index);
+
+    /**
+     * @brief Retruns a list with this instruction's used 
+     * variables 
+     */
+    std::list<std::string *> getVariables();
+
     // SETTERS
 
     /**
      * @brief Sets this instruction's label to the given one 
      */
     void setLabel(std::string *label);
+
+    // TEMPORARY VARIABLE LIVENESS
+
+    /**
+     * @brief Adds a new variable to this TAC's live-in list
+     * @param temp Temporary variable's name
+     */
+    void addLiveIn(std::string *temp);
+
+    /**
+     * @brief Adds a new variable to this TAC's live-out list 
+     * @param temp Temporary variable's name
+     */
+    void addLiveOut(std::string *temp);
+
+    /**
+     * @brief Removes a variable from this TAC's live-in list
+     * @param temp Temporary variable's name 
+     */
+    void removeLiveIn(std::string *temp);
+
+    /**
+     * @brief Removes a variable from this TAC's live-out list
+     * @param temp Temporary variable's name 
+     */
+    void removeLiveOut(std::string *temp);
+
+    /**
+     * @brief Returns the variables that are 'live' during this 
+     * instruction 
+     */
+    std::vector<std::string *> getLive();
 
     // INSTRUCTION LIST LOGIC
 

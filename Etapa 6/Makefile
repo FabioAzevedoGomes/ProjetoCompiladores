@@ -9,7 +9,23 @@ all: dirs classes parser scanner
 	g++ -c ${SRC}main.c -o ${OBJ}main.o -I ${INC} -Wall
 	g++ -c ${INC}parser.tab.c -I ${INC} -o ${OBJ}parser.tab.o
 	g++ -c ${SRC}lex.yy.c -I ${INC} -o ${OBJ}lex.yy.o
-	g++ -o etapa6 ${OBJ}main.o ${OBJ}Manager.o ${OBJ}Type.o ${OBJ}Token.o ${OBJ}Node.o ${OBJ}Symbol.o ${OBJ}SymbolTable.o ${OBJ}Tac.o ${OBJ}Exceptions.o ${OBJ}ASM.o ${OBJ}lex.yy.o ${OBJ}parser.tab.o -lfl -lm -Wall
+	g++ -o etapa6 ${OBJ}main.o\
+				  ${OBJ}Manager.o\
+				  ${OBJ}Type.o\
+				  ${OBJ}Token.o\
+				  ${OBJ}Node.o\
+				  ${OBJ}Symbol.o\
+				  ${OBJ}SymbolTable.o\
+				  ${OBJ}Tac.o\
+				  ${OBJ}Exceptions.o\
+				  ${OBJ}Vertex.o\
+				  ${OBJ}Edge.o\
+				  ${OBJ}Color.o\
+				  ${OBJ}Graph.o\
+				  ${OBJ}ASM.o\
+				  ${OBJ}lex.yy.o\
+				  ${OBJ}parser.tab.o\
+				  -lfl -lm -Wall
 
 # Data classes implemented
 classes:
@@ -21,6 +37,10 @@ classes:
 	g++ -c ${SRC}SymbolTable.cpp -I ${INC} -o ${OBJ}SymbolTable.o -Wall
 	g++ -c ${SRC}Tac.cpp -I ${INC} -o ${OBJ}Tac.o -Wall
 	g++ -c ${SRC}Exceptions.cpp -I ${INC} -o ${OBJ}Exceptions.o -Wall
+	g++ -c ${SRC}Vertex.cpp -I ${INC} -o ${OBJ}Vertex.o -Wall
+	g++ -c ${SRC}Edge.cpp -I ${INC} -o ${OBJ}Edge.o -Wall
+	g++ -c ${SRC}Color.cpp -I ${INC} -o ${OBJ}Color.o -Wall
+	g++ -c ${SRC}Graph.cpp -I ${INC} -o ${OBJ}Graph.o -Wall
 	g++ -c ${SRC}ASM.cpp -I ${INC} -o ${OBJ}ASM.o -Wall
 
 # Bison parser

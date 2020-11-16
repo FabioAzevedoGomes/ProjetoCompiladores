@@ -1532,7 +1532,7 @@ Tac *Node::generateFunctionDeclarationTAC()
     std::string *const_8 = Tac::getName(std::to_string(8));
 
     // Generate code for the return statement
-    load_result = new Tac(ILOC_LOADI, const_0, t1);              // loadAi  0      => t1
+    load_result = new Tac(ILOC_LOADI, const_0, t1);              // loadI   0      => t1
     save_return = new Tac(ILOC_STOREAI, t1, rfp, offset_return); // storeAI t1     => rfp, offset_return
     get_return_address = new Tac(ILOC_LOADAI, rfp, const_0, t2); // loadAI  rfp, 0 => t2
     get_old_rsp = new Tac(ILOC_LOADAI, rfp, const_4, t3);        // loadAI  rfp, 4 => t3

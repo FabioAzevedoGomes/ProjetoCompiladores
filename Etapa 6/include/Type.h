@@ -12,8 +12,9 @@
 #include <unordered_map>
 #include <string>
 
-#define SHIFT_MAX 16   // Max shift amount
-#define MAX_CHILDREN 5 // Maximum number of children in a node
+#define SHIFT_MAX 16      // Max shift amount
+#define MAX_CHILDREN 5    // Maximum number of children in a node
+#define X86_64_REGCOUNT 8 // Number of general use registers available in x86_64 processor
 
 // Available language types
 typedef enum
@@ -195,6 +196,19 @@ const std::unordered_map<ILOCop, std::string> opname = {
     {ILOC_CBR, "cbr"},
     {ILOC_JUMPI, "jumpI"},
     {ILOC_JUMP, "jump"}
+
+};
+
+// Intermediate code to ASM translation
+const std::unordered_map<ILOCop, std::string> x86_64_ASM = {
+    {ILOC_NOP, "nop"},
+    {ILOC_ADD, "addq"},
+    {ILOC_ADDI, "addq"},
+    {ILOC_SUB, "subq"},
+    {ILOC_SUBI, "subq"},
+
+    {ILOC_DIV, "idivq"},
+    {ILOC_MULT, "mul"}
 
 };
 

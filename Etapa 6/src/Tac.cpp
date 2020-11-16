@@ -168,9 +168,101 @@ Tac *Tac::getNext()
     return this->next;
 }
 
+Tac *Tac::getPrev()
+{
+    return this->prev;
+}
+
+std::string *Tac::getArgument(int index)
+{
+    std::string *arg = NULL;
+
+    switch (index)
+    {
+    case 0:
+        arg = this->arg1;
+        break;
+    case 1:
+        arg = this->arg2;
+        break;
+    case 2:
+        arg = this->arg3;
+        break;
+    default:
+        break;
+    }
+
+    return arg;
+}
+
+std::list<std::string *> Tac::getVariables()
+{
+    std::list<std::string *> vars;
+
+    if (this->arg1 != NULL && this->arg1->at(0) == 'r' && this->arg1->at(1) != 's' && this->arg1->at(1) != 'f' && this->arg1->at(1) != 'b')
+        vars.push_back(this->arg1);
+
+    if (this->arg2 != NULL && this->arg2->at(0) == 'r' && this->arg2->at(1) != 's' && this->arg2->at(1) != 'f' && this->arg2->at(1) != 'b')
+        vars.push_back(this->arg2);
+
+    if (this->arg3 != NULL && this->arg3->at(0) == 'r' && this->arg3->at(1) != 's' && this->arg3->at(1) != 'f' && this->arg3->at(1) != 'b')
+        vars.push_back(this->arg3);
+
+    return vars;
+}
+
 void Tac::setLabel(std::string *label)
 {
     this->label = label;
+}
+
+void Tac::addLiveIn(std::string *temp)
+{
+    this->live_in.push_back(temp);
+}
+
+void Tac::addLiveOut(std::string *temp)
+{
+    // Add as live out
+    this->live_out.push_back(temp);
+
+    // If next instruction is not for another function
+    if (this->next != NULL && !ASM::startsNewFunction(this->next))
+    {
+        // Add as live in and live out to next
+        this->next->addLiveIn(temp);
+        this->next->addLiveOut(temp);
+    }
+}
+
+void Tac::removeLiveIn(std::string *temp)
+{
+    auto index = std::find(this->live_in.begin(), this->live_in.end(), temp);
+
+    if (index != this->live_in.end())
+        this->live_in.erase(index);
+}
+
+void Tac::removeLiveOut(std::string *temp)
+{
+    // Remove from live-out list
+    auto index = std::find(this->live_out.begin(), this->live_out.end(), temp);
+
+    if (index != this->live_out.end())
+        this->live_out.erase(index);
+
+    // If next instruction does not start a new function
+    if (this->next != NULL && !ASM::startsNewFunction(this->next))
+    {
+        // Remove from next instruction's live in and live out
+        this->next->removeLiveIn(temp);
+        this->next->removeLiveOut(temp);
+    }
+}
+
+std::vector<std::string *> Tac::getLive()
+{
+    return this->live_in;
 }
 
 void Tac::addBefore(Tac *instruction)
