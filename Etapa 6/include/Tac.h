@@ -54,6 +54,8 @@ private:
     std::vector<std::string *> live_in;
     std::vector<std::string *> live_out;
 
+    bool starts_return; // If this instruction starts a return command
+
 public:
     /**
      * @brief Creates a new register name for usage with temporary variables
@@ -167,6 +169,11 @@ public:
     std::string *getArgument(int index);
 
     /**
+     * @brief If this instruction starts a return command 
+     */
+    bool startsReturn();
+
+    /**
      * @brief Retruns a list with this instruction's used 
      * variables 
      */
@@ -178,6 +185,11 @@ public:
      * @brief Sets this instruction's label to the given one 
      */
     void setLabel(std::string *label);
+
+    /**
+     *  @brief Sets this instruction as starting a return sequence
+     */
+    void setReturn();
 
     // TEMPORARY VARIABLE LIVENESS
 

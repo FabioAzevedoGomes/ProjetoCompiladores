@@ -92,6 +92,8 @@ Tac::Tac(ILOCop opcode_, std::string *arg1_, std::string *arg2_, std::string *ar
 
     this->next = NULL;
     this->prev = NULL;
+
+    this->starts_return = false;
 }
 
 Tac::Tac(Tac &tac)
@@ -105,6 +107,7 @@ Tac::Tac(Tac &tac)
     this->label = tac.label;
     this->next = NULL;
     this->prev = NULL;
+    this->starts_return = tac.starts_return;
 
     // If there are more commands
     if (tac.next != NULL)
@@ -193,6 +196,11 @@ std::string *Tac::getArgument(int index)
     }
 
     return arg;
+}
+
+bool Tac::startsReturn()
+{
+    return this->starts_return;
 }
 
 std::list<std::string *> Tac::getVariables()
@@ -312,6 +320,11 @@ void Tac::addLast(Tac *instruction)
         // At the end, insert command
         aux->addAfter(instruction);
     }
+}
+
+void Tac::setReturn()
+{
+    this->starts_return = true;
 }
 
 std::string Tac::toString()

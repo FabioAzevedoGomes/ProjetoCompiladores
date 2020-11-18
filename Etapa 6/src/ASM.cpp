@@ -101,7 +101,7 @@ std::string ASM::generateCodeSegment()
                  << "#  Start of Code Segment" << std::endl
                  << "# =======================" << std::endl;
 
-    // Move past starting instructions untilhalt (They are covered by data segment initialization)
+    // Move past starting instructions until halt (They are covered by data segment initialization)
     for (current = ASM::ILOC_code; current->getOpcode() != ILOC_HALT; current = current->getNext())
         ;
 
@@ -125,6 +125,10 @@ std::string ASM::generateCodeSegment()
 
                 // Generate function initial code
                 code_segment << ASM::generateFunctionStart(current);
+
+                // Move past initialization instructions
+                for (; current->getPrev()->getOpcode() != ILOC_ADDI; current = current->getNext())
+                    ;
             }
             catch (const std::out_of_range &e)
             {
@@ -146,6 +150,19 @@ std::string ASM::generateCodeSegment()
                 // Does not start a function, add
                 code_segment << *label << ": " << std::endl;
             }
+        }
+
+        // If function starts a return sequence
+        if (current->startsReturn())
+        {
+            // Add regload instruction
+            code_segment << "\tmovl "
+                         << ASM::translateArgument(current->getArgument(0))
+                         << ", \%eax" << std::endl;
+
+            // Ignore everything until jump return
+            for (; current->getOpcode() != ILOC_JUMP; current = current->getNext())
+                ;
         }
 
         // Transate instruction to x86 ASM
@@ -196,7 +213,8 @@ std::string ASM::generateFunctionStart(Tac *current)
                    << "\t.type  " << current_function->getName() << ", @function" << std::endl;
 
     function_start << current_function->getName() << ":" << std::endl
-                   << ".LFB" << ASM::function_index << ":" << std::endl;
+                   << ".LFB" << ASM::function_index << ":" << std::endl
+                   << "\tpushq \%rbp" << std::endl;
 
     // Generate a register allocation map
     ASM::allocateRegisters(current);
@@ -338,10 +356,10 @@ std::string ASM::translateArgument(std::string *arg)
                 result << "\%rsp";
                 break;
             case 'b': // rbss
-                result << "\%rip";
+                result << "\%ds";
                 break;
             case 'p': // rpc
-                result << "?";
+                result << "\%rip";
                 break;
             default: // Error
                 result << "?";
@@ -363,6 +381,10 @@ std::string ASM::translateArgument(std::string *arg)
 std::string ASM::translateTac(Tac *instruction)
 {
     std::stringstream code;
+
+    // DEBUG
+    code << "# TAC: " << instruction->toString() << std::endl
+         << "\t";
 
     // Based on instruction type
     switch (instruction->getOpcode())
@@ -392,7 +414,7 @@ std::string ASM::translateTac(Tac *instruction)
             code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << ASM::translateArgument(instruction->getArgument(2)) << std::endl;
 
             // addq r2, r3 // r3 <- r2 + r3
-            code << "addq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2));
+            code << "\taddq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2));
         }
     }
     break;
@@ -412,7 +434,7 @@ std::string ASM::translateTac(Tac *instruction)
             code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << ASM::translateArgument(instruction->getArgument(2)) << std::endl;
 
             // subq r2 r3
-            code << "subq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2));
+            code << "\tsubq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2));
         }
     }
     break;
@@ -423,23 +445,23 @@ std::string ASM::translateTac(Tac *instruction)
         code << "movq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2)) << std::endl;
 
         // subq r1 r3
-        code << "subq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << ASM::translateArgument(instruction->getArgument(2));
+        code << "\tsubq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << ASM::translateArgument(instruction->getArgument(2));
     }
     break;
     case ILOC_MULT: // Multiplication
     case ILOC_MULTI:
     {
         code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", \%eax " << std::endl;
-        code << "imulq " << ASM::translateArgument(instruction->getArgument(1)) << ", \%eax" << std::endl;
-        code << "movq \%eax, " << ASM::translateArgument(instruction->getArgument(2));
+        code << "\timulq " << ASM::translateArgument(instruction->getArgument(1)) << ", \%eax" << std::endl;
+        code << "\tmovq \%eax, " << ASM::translateArgument(instruction->getArgument(2));
     }
     break;
     case ILOC_DIV: // Division
     case ILOC_DIVI:
     {
         code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", \%eax" << std::endl;
-        code << "idivq " << ASM::translateArgument(instruction->getArgument(1)) << std::endl;
-        code << "movq \%eax " << ASM::translateArgument(instruction->getArgument(2));
+        code << "\tidivq " << ASM::translateArgument(instruction->getArgument(1)) << std::endl;
+        code << "\tmovq \%eax " << ASM::translateArgument(instruction->getArgument(2));
     }
     break;
     case ILOC_STORE: // Simple store
@@ -536,7 +558,8 @@ std::string ASM::translateTac(Tac *instruction)
     break;
     case ILOC_JUMP: // Unconditional branch to register value
     {
-        code << "ret ";
+        code << "popq \%rbp" << std::endl
+             << "\tret ";
     }
     break;
     default:

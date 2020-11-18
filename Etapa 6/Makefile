@@ -64,4 +64,4 @@ test:
 
 # Clean
 clean:
-	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa6 ${DOC}*.output *.s
+	rm ${SRC}lex.yy.c ${INC}parser.tab.* ${OBJ}*.o etapa6 ${DOC}*.output *.s a.out

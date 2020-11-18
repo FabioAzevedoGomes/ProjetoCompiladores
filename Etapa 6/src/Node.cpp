@@ -1550,6 +1550,8 @@ Tac *Node::generateFunctionDeclarationTAC()
     update_rsp->addLast(update_rfp);
     update_rfp->addLast(jump_return);
 
+    load_result->setReturn();
+
     // Add 'fake' return at the end of function
     update_rsp_vars->addLast(load_result);
 
@@ -1710,6 +1712,8 @@ Tac *Node::generateReturnTAC()
     get_old_rfp->addLast(update_rsp);
     update_rsp->addLast(update_rfp);
     update_rfp->addLast(jump_return);
+
+    load_result->setReturn();
 
     // Return first instruction in the generated code block
     return load_result;
