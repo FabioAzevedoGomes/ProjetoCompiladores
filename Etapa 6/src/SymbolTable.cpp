@@ -61,7 +61,7 @@ Symbol *SymbolTable::getSymbol(std::string key)
 Symbol *SymbolTable::getSymbolByAddress(int address)
 {
     for (auto i = this->table.begin(); i != this->table.end(); ++i)
-        if (i->second->getAddress() == address)
+        if (i->second->getAddress() == address && i->second->getNature() != NAT_FUNCTION)
             return i->second;
 
     return NULL;

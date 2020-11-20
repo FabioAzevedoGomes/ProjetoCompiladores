@@ -1,7 +1,12 @@
+int foo()
+{
+    return 1;
+}
+
 int main()
 {
     int x, y;
-    x = 2;
+    x = foo();
 
     return x;
 }

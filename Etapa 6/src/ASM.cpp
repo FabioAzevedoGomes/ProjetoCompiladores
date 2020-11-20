@@ -102,6 +102,14 @@ std::string ASM::generateCodeSegment()
                  << "#  Start of Code Segment" << std::endl
                  << "# =======================" << std::endl;
 
+    // DEBUG
+    // SymbolTable *global = Manager::getActiveSymbolTable();
+    // auto x = global->getHashTable();
+    // for (auto i = x.begin(); i != x.end(); ++i)
+    // {
+    //     std::cout << i->second->toString() << std::endl;
+    // }
+
     // Move past starting instructions until halt (They are covered by data segment initialization)
     for (current = ASM::ILOC_code; current->getOpcode() != ILOC_HALT; current = current->getNext())
         ;
@@ -153,7 +161,7 @@ std::string ASM::generateCodeSegment()
             }
         }
 
-        // If function starts a return sequence
+        // If instruction starts a return sequence
         if (current->startsReturn())
         {
             // If loading a value
@@ -164,7 +172,7 @@ std::string ASM::generateCodeSegment()
             }
             else if (!current->getArgument(0)->compare("rfp"))
             {
-                code_segment << "\tmovl -" <<  *current->getArgument(1) << "(\%rbp), \%eax" << std::endl;
+                code_segment << "\tmovl -" << *current->getArgument(1) << "(\%rbp), \%eax" << std::endl;
             }
             else
             {
@@ -456,6 +464,10 @@ std::string ASM::translateTac(Tac *instruction)
                     code << "movl " << ASM::translateArgument(instruction->getNext()->getArgument(0)) << "d, -" << *instruction->getArgument(1) << "(\%rbp)";
                 }
             }
+            else if (!instruction->getArgument(0)->compare("rpc"))
+            {
+                code << "# Ignore";
+            }
             else
             {
 
@@ -522,8 +534,8 @@ std::string ASM::translateTac(Tac *instruction)
     break;
     case ILOC_STOREAI: // Composite store
     {
-        // movq r1 val(r2)
-        code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << *instruction->getArgument(2) << "(" << ASM::translateArgument(instruction->getArgument(1)) << ")";
+        // movq r1 -val(r2)
+        code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", -" << *instruction->getArgument(2) << "(" << ASM::translateArgument(instruction->getArgument(1)) << ")";
     }
     break;
     case ILOC_LOAD: // Simple memory load
@@ -540,8 +552,28 @@ std::string ASM::translateTac(Tac *instruction)
     break;
     case ILOC_LOADAI: // Composite memory load
     {
-        // movq lit(r1), r2
-        code << "movq " << *instruction->getArgument(1) << "(" << ASM::translateArgument(instruction->getArgument(0)) << "), " << ASM::translateArgument(instruction->getArgument(2));
+        // If returning for a function
+        if (instruction->getPrev()->getOpcode() == ILOC_JUMPI)
+        {
+            try
+            {
+                // Check if jump to function
+                Symbol *function = functions.at(instruction->getPrev()->getArgument(0));
+
+                // Load from eax instead
+                code << "movl \%eax,  " << ASM::translateArgument(instruction->getArgument(2)) << "d";
+            }
+            catch (const std::out_of_range &e)
+            {
+                // movq -lit(r1), r2
+                code << "movq -" << *instruction->getArgument(1) << "(" << ASM::translateArgument(instruction->getArgument(0)) << "), " << ASM::translateArgument(instruction->getArgument(2));
+            }
+        }
+        else
+        {
+            // movq -lit(r1), r2
+            code << "movq -" << *instruction->getArgument(1) << "(" << ASM::translateArgument(instruction->getArgument(0)) << "), " << ASM::translateArgument(instruction->getArgument(2));
+        }
     }
     break;
     case ILOC_I2I: // Register copy
@@ -613,8 +645,10 @@ std::string ASM::translateTac(Tac *instruction)
     }
     break;
     default:
+    {
         code << "nop # No translation for " << opname.at(instruction->getOpcode());
-        break;
+    }
+    break;
     }
 
     // Return generated code string
