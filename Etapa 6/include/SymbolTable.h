@@ -57,6 +57,13 @@ public:
     Symbol *getSymbol(std::string key);
 
     /**
+     * @brief Returns the symbol allocated to memory address
+     * @param address Address searched
+     * @returns Reference to the symbol 
+     */
+    Symbol *getSymbolByAddress(int address);
+
+    /**
      * @brief Returns the current address for this symbol table
      */
     int getAddress();

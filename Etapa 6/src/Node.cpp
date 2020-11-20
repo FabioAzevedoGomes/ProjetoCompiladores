@@ -647,11 +647,11 @@ Tac *Node::generateInitializationTAC()
     store_result = new Tac(ILOC_STORE, t2, t1); // store t2 => t1
 
     // Link code together
-    calculate_lval->addLast(calculate_rval);
-    calculate_rval->addLast(store_result);
+    calculate_rval->addLast(calculate_lval);
+    calculate_lval->addLast(store_result);
 
     // Return first instruction in the code block
-    return calculate_lval;
+    return calculate_rval;
 }
 
 Tac *Node::generateAttributionTAC()
@@ -733,12 +733,12 @@ Tac *Node::generateAttributionTAC()
     store_result = new Tac(ILOC_STORE, t2, t1); // store t2 => t1
 
     // Link code common to both cases
-    calculate_lval->addLast(calculate_rval);
     calculate_rval->addLast(attribute_true);
-    calculate_rval->addLast(store_result);
+    calculate_rval->addLast(calculate_lval);
+    calculate_lval->addLast(store_result);
 
     // Return first instruction in the code block
-    return calculate_lval;
+    return calculate_rval;
 }
 
 Tac *Node::generateUnopTAC(std::string op)
@@ -1403,7 +1403,7 @@ Tac *Node::generateShiftTAC(ILOCop op)
 
     // Generate code for shift operation
     load_actual_value = new Tac(ILOC_LOAD, t1, t3); // load   t1     => t3
-    shift_instruction = new Tac(op, t3, t2, t3);    // shift t3, t2 => t3
+    shift_instruction = new Tac(op, t3, t2, t3);    // shift  t3, t2 => t3
     store_new_value = new Tac(ILOC_STORE, t3, t1);  // store  t3     => t1
 
     // Link code together

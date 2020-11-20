@@ -157,7 +157,15 @@ std::string Graph::outputInfo()
     std::stringstream info;
 
     info << "Vertex count: " << this->vertex_count << std::endl
-         << "Edge count: " << this->edge_count << std::endl;
+         << "Edge count: " << this->edge_count << std::endl
+         << "Color count: " << this->getUsedColorCount() << std::endl;
+
+    for (auto i = this->V.begin(); i != this->V.end(); ++i)
+    {
+        info << "Vertex " << *i->getName() << " given color " << this->C[i->getColor()].getId() << std::endl;
+    }
+
+    info << std::endl;
 
     return info.str();
 }
@@ -204,7 +212,7 @@ bool Graph::minimizeRegisterUsage(int k)
             vertex_ids.erase(vertex_ids.begin() + v_i);
         }
     }
-    return this->vertex_count <= (unsigned int)k;
+    return this->getUsedColorCount() <= (unsigned int)k;
 }
 
 std::map<std::string *, std::string> Graph::getColorMapping()

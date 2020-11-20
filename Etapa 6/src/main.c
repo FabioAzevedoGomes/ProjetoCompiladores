@@ -23,7 +23,7 @@ int main(int argc, char **argv)
         // exporta(arvore);
 
         // Export the ILOC code
-        //export_code(arvore);
+        // export_code(arvore);
 
         // Convert from intermediate ILOC code to x86_64 assembly
         generate_ASM(arvore);

@@ -4,8 +4,12 @@ SRC := src/
 DOC := doc/
 TST := tests/
 
+# Rebuild
+all:
+	make clean & make comp
+
 # Make entire compiler
-all: dirs classes parser scanner
+comp: dirs classes parser scanner
 	g++ -c ${SRC}main.c -o ${OBJ}main.o -I ${INC} -Wall
 	g++ -c ${INC}parser.tab.c -I ${INC} -o ${OBJ}parser.tab.o
 	g++ -c ${SRC}lex.yy.c -I ${INC} -o ${OBJ}lex.yy.o
@@ -60,7 +64,9 @@ dirs:
 # Tests
 test:
 	@cat -n ${TST}$(in)
-	@valgrind --leak-check=full --track-origins=yes ./etapa6 < ${TST}$(in) > output.s
+	@#valgrind --leak-check=full --track-origins=yes ./etapa6 < ${TST}$(in) > output.s
+	@./etapa6 < ${TST}$(in) > output.s
+	@gcc output.s
 
 # Clean
 clean:

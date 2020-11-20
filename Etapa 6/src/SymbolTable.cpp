@@ -58,6 +58,15 @@ Symbol *SymbolTable::getSymbol(std::string key)
     return symbol;
 }
 
+Symbol *SymbolTable::getSymbolByAddress(int address)
+{
+    for (auto i = this->table.begin(); i != this->table.end(); ++i)
+        if (i->second->getAddress() == address)
+            return i->second;
+
+    return NULL;
+}
+
 int SymbolTable::getAddress()
 {
     return this->current_address;

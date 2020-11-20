@@ -69,7 +69,8 @@ std::string ASM::generateDataSegment()
             // Get integer
             literal = (*i)->getValue()->getValue().integer;
 
-            // 'Declare' byte
+            // 'Declare' literal
+            data_segment << "__" << (*i)->getName() << ":" << std::endl;
             data_segment << "\t.long " << literal << "\t# Literal: " << (*i)->getName() << std::endl;
         }
         break;
@@ -155,10 +156,23 @@ std::string ASM::generateCodeSegment()
         // If function starts a return sequence
         if (current->startsReturn())
         {
-            // Add regload instruction
-            code_segment << "\tmovl "
-                         << ASM::translateArgument(current->getArgument(0))
-                         << ", \%eax" << std::endl;
+            // If loading a value
+            if (!current->getArgument(0)->compare("rbss"))
+            {
+                Symbol *symbol = Manager::getActiveSymbolTable()->getSymbolByAddress(std::stoi(*current->getArgument(1)));
+                code_segment << "\tmovl __" << symbol->getName() << "(\%rip), \%eax" << std::endl;
+            }
+            else if (!current->getArgument(0)->compare("rfp"))
+            {
+                code_segment << "\tmovl -" <<  *current->getArgument(1) << "(\%rbp), \%eax" << std::endl;
+            }
+            else
+            {
+                // Add regload instruction
+                code_segment << "\tmovl "
+                             << ASM::translateArgument(current->getArgument(0))
+                             << ", \%eax" << std::endl;
+            }
 
             // Ignore everything until jump return
             for (; current->getOpcode() != ILOC_JUMP; current = current->getNext())
@@ -214,7 +228,8 @@ std::string ASM::generateFunctionStart(Tac *current)
 
     function_start << current_function->getName() << ":" << std::endl
                    << ".LFB" << ASM::function_index << ":" << std::endl
-                   << "\tpushq \%rbp" << std::endl;
+                   << "\tpushq \%rbp" << std::endl
+                   << "\tmovq \%rsp, \%rbp" << std::endl;
 
     // Generate a register allocation map
     ASM::allocateRegisters(current);
@@ -356,7 +371,7 @@ std::string ASM::translateArgument(std::string *arg)
                 result << "\%rsp";
                 break;
             case 'b': // rbss
-                result << "\%ds";
+                result << "(\%rip)";
                 break;
             case 'p': // rpc
                 result << "\%rip";
@@ -410,11 +425,46 @@ std::string ASM::translateTac(Tac *instruction)
         // Otherwise
         else
         {
-            // movq r1 r3 // r3 <- r1
-            code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << ASM::translateArgument(instruction->getArgument(2)) << std::endl;
+            // Check if this instruction is perparing to load or store a value
+            if (!instruction->getArgument(0)->compare("rbss"))
+            {
+                // Get symbol associated with the address
+                Symbol *symbol = Manager::getActiveSymbolTable()->getSymbolByAddress(std::stoi(*instruction->getArgument(1)));
 
-            // addq r2, r3 // r3 <- r2 + r3
-            code << "\taddq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2));
+                // Based on next instruction
+                if (instruction->getNext()->getOpcode() == ILOC_LOAD)
+                {
+                    // Add ASM to load it directly into the next instruction's register
+                    code << "movl __" << symbol->getName() << "(\%rip), " << ASM::translateArgument(instruction->getArgument(2)) << "d";
+                }
+                else if (instruction->getNext()->getOpcode() == ILOC_STORE)
+                {
+                    // Add ASM to store directly to it
+                    code << "movl " << ASM::translateArgument(instruction->getNext()->getArgument(2)) << "d, __" << symbol->getName() << "(\%rip)";
+                }
+            }
+            else if (!instruction->getArgument(0)->compare("rfp"))
+            {
+
+                if (instruction->getNext()->getOpcode() == ILOC_LOAD)
+                {
+                    code << "movl -" << *instruction->getArgument(1) << "(\%rbp), " << ASM::translateArgument(instruction->getArgument(2)) << "d";
+                }
+                else if (instruction->getNext()->getOpcode() == ILOC_STORE)
+                {
+                    // Add ASM to store directly to it
+                    code << "movl " << ASM::translateArgument(instruction->getNext()->getArgument(0)) << "d, -" << *instruction->getArgument(1) << "(\%rbp)";
+                }
+            }
+            else
+            {
+
+                // movq r1 r3 // r3 <- r1
+                code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", " << ASM::translateArgument(instruction->getArgument(2)) << std::endl;
+
+                // addq r2, r3 // r3 <- r2 + r3
+                code << "\taddq " << ASM::translateArgument(instruction->getArgument(1)) << ", " << ASM::translateArgument(instruction->getArgument(2));
+            }
         }
     }
     break;
@@ -467,7 +517,7 @@ std::string ASM::translateTac(Tac *instruction)
     case ILOC_STORE: // Simple store
     {
         // movq r1, (r2)
-        code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", (" << ASM::translateArgument(instruction->getArgument(1)) << ")";
+        //code << "movq " << ASM::translateArgument(instruction->getArgument(0)) << ", (" << ASM::translateArgument(instruction->getArgument(1)) << ")";
     }
     break;
     case ILOC_STOREAI: // Composite store
@@ -479,7 +529,7 @@ std::string ASM::translateTac(Tac *instruction)
     case ILOC_LOAD: // Simple memory load
     {
         // movq (r1), r2
-        code << "movq (" << ASM::translateArgument(instruction->getArgument(0)) << "), " << ASM::translateArgument(instruction->getArgument(1));
+        //code << "movq (" << ASM::translateArgument(instruction->getArgument(0)) << "), " << ASM::translateArgument(instruction->getArgument(1));
     }
     break;
     case ILOC_LOADI: // Constant load
